@@ -8,13 +8,13 @@ plugins {
 }
 
 android {
-    namespace = "nstv.composetemplate"
-    compileSdk = 33
+    namespace = "nstv.bluetoothmagic"
+    compileSdk = 34
 
     defaultConfig {
-        applicationId = "nstv.composetemplate"
+        applicationId = "nstv.bluetoothmagic"
         minSdk = 25
-        targetSdk = 33
+        targetSdk = 34
         versionCode = 1
         versionName = "1.0"
 

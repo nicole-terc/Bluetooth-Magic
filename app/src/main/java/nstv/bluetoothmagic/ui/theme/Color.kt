@@ -1,4 +1,4 @@
-package nstv.composetemplate.ui.theme
+package nstv.bluetoothmagic.ui.theme
 
 import androidx.compose.ui.graphics.Color
 

@@ -1,4 +1,4 @@
-package nstv.composetemplate.di
+package nstv.bluetoothmagic.di
 
 import dagger.Module
 import dagger.Provides

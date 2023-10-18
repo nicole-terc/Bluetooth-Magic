@@ -1,4 +1,4 @@
-package nstv.composetemplate.data.remote
+package nstv.bluetoothmagic.data.remote
 
 import android.content.Context
 import android.os.Build.VERSION.SDK_INT
@@ -7,20 +7,17 @@ import coil.decode.GifDecoder
 import coil.decode.ImageDecoderDecoder
 import coil.decode.SvgDecoder
 import coil.util.DebugLogger
-import com.jakewharton.retrofit2.converter.kotlinx.serialization.asConverterFactory
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
 import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import kotlinx.serialization.json.Json
+import nstv.bluetoothmagic.BuildConfig
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
-import retrofit2.Retrofit
 import javax.inject.Named
-import nstv.composetemplate.BuildConfig
 import okhttp3.Call
-import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.logging.HttpLoggingInterceptor
 import javax.inject.Singleton
 
@@ -58,18 +55,6 @@ object RemoteModule {
         ignoreUnknownKeys = true
     }
 
-    @Provides
-    @Singleton
-    fun providesRetrofit(networkJson: Json, callFactory: Call.Factory): Retrofit =
-        Retrofit.Builder()
-            .baseUrl(BuildConfig.BASE_URL)
-            .addConverterFactory(networkJson.asConverterFactory("application/json".toMediaType()))
-            .callFactory(callFactory)
-            .build()
-
-    @Provides
-    @Singleton
-    fun providesApiService(retrofit: Retrofit): ApiService = retrofit.create(ApiService::class.java)
 
     @Provides
     @Singleton

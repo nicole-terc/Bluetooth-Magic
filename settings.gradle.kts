@@ -12,5 +12,5 @@ dependencyResolutionManagement {
         mavenCentral()
     }
 }
-rootProject.name = "Compose Template"
+rootProject.name = "Bluetooth Magic"
 include(":app")

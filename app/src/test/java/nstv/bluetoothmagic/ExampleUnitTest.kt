@@ -1,4 +1,4 @@
-package nstv.composetemplate
+package nstv.bluetoothmagic
 
 import org.junit.Test
 

@@ -1,4 +1,4 @@
-package nstv.composetemplate
+package nstv.bluetoothmagic
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -9,16 +9,16 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import dagger.hilt.android.AndroidEntryPoint
-import nstv.composetemplate.ui.screen.listView.ListScreenView
-import nstv.composetemplate.ui.theme.ComposeTemplateTheme
-import nstv.composetemplate.ui.theme.Grid
+import nstv.bluetoothmagic.ui.screen.listView.ListScreenView
+import nstv.bluetoothmagic.ui.theme.BluetoothMagicTheme
+import nstv.bluetoothmagic.ui.theme.Grid
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            ComposeTemplateTheme {
+            BluetoothMagicTheme {
                 Surface(
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background

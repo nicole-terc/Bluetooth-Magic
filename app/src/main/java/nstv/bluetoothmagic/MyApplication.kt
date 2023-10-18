@@ -1,4 +1,4 @@
-package nstv.composetemplate
+package nstv.bluetoothmagic
 
 import android.app.Application
 import coil.ImageLoader
