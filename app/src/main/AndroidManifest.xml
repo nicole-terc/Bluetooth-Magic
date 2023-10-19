@@ -25,6 +25,11 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
 
+    <uses-sdk
+        android:minSdkVersion="31"
+        tools:ignore="GradleOverrides"
+        tools:overrideLibrary="androidx.bluetooth" />
+
     <application
         android:name=".MyApplication"
         android:allowBackup="true"

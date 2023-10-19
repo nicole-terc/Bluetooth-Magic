@@ -4,14 +4,13 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.ui.Modifier
 import dagger.hilt.android.AndroidEntryPoint
-import nstv.bluetoothmagic.ui.screen.listView.ListScreenView
+import nstv.bluetoothmagic.ui.screen.MainContent
 import nstv.bluetoothmagic.ui.theme.BluetoothMagicTheme
-import nstv.bluetoothmagic.ui.theme.Grid
+
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
@@ -23,9 +22,7 @@ class MainActivity : ComponentActivity() {
                     modifier = Modifier.fillMaxSize(),
                     color = MaterialTheme.colorScheme.background
                 ) {
-                    ListScreenView(modifier = Modifier
-                        .fillMaxSize()
-                        .padding(Grid.Two))
+                    MainContent()
                 }
             }
         }

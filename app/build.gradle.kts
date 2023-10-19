@@ -13,7 +13,7 @@ android {
 
     defaultConfig {
         applicationId = "nstv.bluetoothmagic"
-        minSdk = 25
+        minSdk = 31
         targetSdk = 34
         versionCode = 1
         versionName = "1.0"
@@ -63,11 +63,14 @@ dependencies {
     implementation(libs.bundles.coil)
     implementation(libs.hilt.android)
     kapt(libs.hilt.compiler)
+    implementation(libs.accompanist.permissions)
+    implementation(libs.androidx.bluetooth)
 
     testImplementation(libs.junit4)
     androidTestImplementation(libs.androidx.test.ext)
     androidTestImplementation(libs.androidx.test.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test)
+    androidTestImplementation(libs.androidx.bluetooth.testing)
     debugImplementation(libs.bundles.compose.debug)
 }
