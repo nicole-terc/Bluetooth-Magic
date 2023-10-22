@@ -8,11 +8,13 @@ import androidx.bluetooth.AdvertiseParams
 import androidx.bluetooth.BluetoothDevice
 import androidx.bluetooth.BluetoothLe
 import androidx.bluetooth.BluetoothLe.Companion.ADVERTISE_STARTED
+import androidx.bluetooth.GattServerRequest
 import androidx.bluetooth.ScanFilter
 import androidx.bluetooth.ScanResult
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -35,8 +37,14 @@ class BluetoothLeHandler @Inject constructor(
     private var scope = CoroutineScope(SupervisorJob())
     private var advertiseScope = CoroutineScope(SupervisorJob())
     private var isAdvertising: Boolean = false
+
+    private var scanningScope = CoroutineScope(SupervisorJob())
+    private var isScanning: Boolean = false
+
     private var scannedDevices: List<ScanResult> = emptyList()
     private var connectedDevices: MutableList<BluetoothDevice> = mutableListOf()
+
+    private var currentServerDevice: BluetoothDevice? = null
 
     fun bluetoothState() = bluetoothStateRepository.bluetoothAdapterState
 
@@ -66,6 +74,7 @@ class BluetoothLeHandler @Inject constructor(
 
     @SuppressLint("MissingPermission")
     suspend fun startAdvertising(fromServer: Boolean) {
+        Log.d("BluetoothLeHandler", "StartAdvertising: $fromServer")
         isAdvertising = true
         val timeout: Int = if (fromServer) 0 else AdvertiseTimeout
         scope.launch {
@@ -103,7 +112,30 @@ class BluetoothLeHandler @Inject constructor(
         }
     }
 
+    @SuppressLint("MissingPermission")
+    suspend fun scan(scanFilters: List<ScanFilter> = emptyList()) {
+        scannedDevices = emptyList()
+        bluetoothStateRepository.updateBluetoothAdapterState(
+            BluetoothAdapterState.Scanning(scannedDevices.map { it.toScannedDevice() })
+        )
+        scope.launch(coroutineDispatcher) {
+            scanningScope.launch {
+                bluetoothLe.scan(scanFilters + ScanFilter(serviceUuid = serviceUUID))
+                    .collect { scanResult ->
+                        scannedDevices =
+                            (scannedDevices + scanResult).distinctBy { it.deviceAddress }
+                        bluetoothStateRepository.updateBluetoothAdapterState(
+                            BluetoothAdapterState.Scanning(
+                                scannedDevices.map { it.toScannedDevice() }
+                            )
+                        )
+                    }
+            }
+        }
+    }
+
     suspend fun startServer() {
+        connectedDevices = mutableListOf()
         bluetoothStateRepository.updateBluetoothAdapterState(BluetoothAdapterState.Loading)
         scope.launch(coroutineDispatcher) {
             val server = bluetoothLe.openGattServer(
@@ -120,9 +152,33 @@ class BluetoothLeHandler @Inject constructor(
                         bluetoothStateRepository.updateBluetoothAdapterState(
                             BluetoothAdapterState.ServerStarted(
                                 isAdvertising = isAdvertising,
-                                connectedDevices = connectedDevices
+                                connectedDevices = connectedDevices.map { it.toScannedDevice() }
                             )
                         )
+                        this.requests.collect { serverRequest ->
+                            Log.d("BluetoothLeHandler", "Request: $serverRequest")
+                            when (serverRequest) {
+                                is GattServerRequest.ReadCharacteristic -> {
+                                    serverRequest.sendResponse(
+                                        "Hello from server".toByteArray()
+                                    )
+                                }
+
+                                is GattServerRequest.WriteCharacteristics -> {
+                                    Log.d(
+                                        "BluetoothLeHandler",
+                                        "Write: ${
+                                            serverRequest.parts.map {
+                                                it.value.toString(
+                                                    Charsets.UTF_8
+                                                )
+                                            }
+                                        }"
+                                    )
+                                    serverRequest.sendResponse()
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -130,40 +186,92 @@ class BluetoothLeHandler @Inject constructor(
     }
 
     @SuppressLint("MissingPermission")
-    suspend fun scan(scanFilters: List<ScanFilter> = emptyList()) {
-        scannedDevices = emptyList()
-        bluetoothStateRepository.updateBluetoothAdapterState(
-            BluetoothAdapterState.Scanning(scannedDevices)
-        )
-        scope.launch(coroutineDispatcher) {
-            bluetoothLe.scan(scanFilters + ScanFilter(serviceUuid = serviceUUID))
-                .collect { scanResult ->
-                    scannedDevices = (scannedDevices + scanResult).distinctBy { it.device.id }
-                    bluetoothStateRepository.updateBluetoothAdapterState(
-                        BluetoothAdapterState.Scanning(
-                            scannedDevices
-                        )
-                    )
-                }
-        }
-    }
-
-    @SuppressLint("MissingPermission")
-    suspend fun connectToServer(scanResult: ScanResult) {
+    suspend fun connectToServer(scanResult: ScannedDevice) {
+        Log.d("BluetoothLeHandler", "ConnectToServer: $scanResult")
+        stopScanning()
         bluetoothStateRepository.updateBluetoothAdapterState(BluetoothAdapterState.Connecting)
         scope.launch(coroutineDispatcher) {
-            bluetoothLe.connectGatt(scanResult.device) {
+            val device =
+                scannedDevices.first { it.deviceAddress.address == scanResult.deviceAddress }.device
+            bluetoothLe.connectGatt(device) {
+                currentServerDevice = device
                 val characteristics: List<Pair<UUID, String>> =
                     getService(serviceUUID)?.characteristics?.map {
                         it.uuid to it.properties.toString()
                     } ?: emptyList()
-
 
                 bluetoothStateRepository.updateBluetoothAdapterState(
                     BluetoothAdapterState.Connected(
                         characteristics = characteristics,
                     )
                 )
+
+//                val gardenCharacteristic = getService(serviceUUID)?.getCharacteristic(
+//                    GardenService.characteristicUUID
+//                )!!
+//
+//                Log.d("BluetoothLeHandler", "ReadCharacteristic: $gardenCharacteristic")
+//                val data = readCharacteristic(gardenCharacteristic)
+//                val stringData = data.getOrNull()?.toString(Charsets.UTF_8) ?: ""
+//                Log.d("BluetoothLeHandler", "DATA: $stringData")
+//
+//                bluetoothStateRepository.updateBluetoothAdapterState(
+//                    BluetoothAdapterState.Connected(
+//                        characteristics = listOf(
+//                            gardenCharacteristic.uuid to stringData
+//                        ),
+//                    )
+//                )
+
+//                Log.d("BluetoothLeHandler", "WriteCharacteristic: $characteristics")
+//                writeCharacteristic(
+//                    gardenCharacteristic,
+//                    "Hello from client".toByteArray()
+//                )
+
+
+            }
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    suspend fun readCharacteristic() {
+        Log.d("BluetoothLeHandler", "ReadCharacteristic HERE")
+        scope.launch(coroutineDispatcher) {
+            scope.launch(coroutineDispatcher) {
+                currentServerDevice?.let { serverDevice ->
+                    bluetoothLe.connectGatt(serverDevice) {
+                        val characteristic = async {
+                            readCharacteristic(
+                                getService(serviceUUID)?.getCharacteristic(
+                                    GardenService.characteristicUUID
+                                )!!
+                            )
+                        }
+                        characteristic.await().let { result ->
+                            Log.d("BluetoothLeHandler", "ReadCharacteristic result: $result")
+
+                            if (result.isSuccess) {
+                                bluetoothStateRepository.updateBluetoothAdapterState(
+                                    BluetoothAdapterState.Connected(
+                                        characteristics = listOf(
+                                            GardenService.characteristicUUID to
+                                                    (result.getOrNull()?.toString(Charsets.UTF_8)
+                                                        ?: "")
+                                        ),
+                                    )
+
+                                )
+                            } else {
+                                bluetoothStateRepository.updateBluetoothAdapterState(
+                                    BluetoothAdapterState.Error(
+                                        "Error reading characteristic: ${result.exceptionOrNull()?.message}"
+                                    )
+                                )
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -181,6 +289,12 @@ class BluetoothLeHandler @Inject constructor(
         } else {
             bluetoothStateRepository.updateBluetoothAdapterStateToCurrentState()
         }
+    }
+
+    fun stopScanning() {
+        isScanning = false
+        scanningScope.cancel()
+        scanningScope = CoroutineScope(SupervisorJob())
     }
 
     fun stopEverything() {

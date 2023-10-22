@@ -29,5 +29,7 @@ class BluetoothStateRepository @Inject constructor(
         updateBluetoothAdapterState(bluetoothAdapter.state)
     }
 
+    fun getCurrentState()  = bluetoothAdapterState.value
+
     fun isBluetoothEnabled() = bluetoothAdapter.isEnabled
 }

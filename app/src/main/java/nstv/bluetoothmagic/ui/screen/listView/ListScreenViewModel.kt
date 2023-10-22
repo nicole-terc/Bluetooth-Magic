@@ -1,5 +1,6 @@
 package nstv.bluetoothmagic.ui.screen.listView
 
+import android.util.Log
 import androidx.bluetooth.ScanResult
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -12,6 +13,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import nstv.bluetoothmagic.bluetooth.BluetoothAdapterState
 import nstv.bluetoothmagic.bluetooth.BluetoothLeHandler
+import nstv.bluetoothmagic.bluetooth.ScannedDevice
 import javax.inject.Inject
 
 sealed interface ListScreenUiState {
@@ -55,9 +57,19 @@ class ListScreenViewModel @Inject constructor(
         }
     }
 
-    fun connectToServer(scanResult: ScanResult) {
+    fun connectToServer(scanResult: ScannedDevice) {
         viewModelScope.launch {
             bluetoothLeHandler.connectToServer(scanResult)
+        }
+//        viewModelScope.launch {
+//            val message = bluetoothLeHandler.getMessageBle()
+//            Log.d("ViewModel", "MESSAGE HERE: $message")
+//        }
+    }
+
+    fun readCharacteristic() {
+        viewModelScope.launch {
+            bluetoothLeHandler.readCharacteristic()
         }
     }
 

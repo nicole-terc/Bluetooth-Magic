@@ -26,6 +26,7 @@ import androidx.compose.ui.Modifier
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import nstv.bluetoothmagic.bluetooth.BluetoothAdapterState
+import nstv.bluetoothmagic.bluetooth.ScannedDevice
 import nstv.bluetoothmagic.ui.components.BluetoothDisabledOverlay
 import nstv.bluetoothmagic.ui.components.PermissionsWrapper
 import nstv.bluetoothmagic.ui.theme.Grid
@@ -49,6 +50,7 @@ fun ListScreenView(
                     startServer = viewModel::startServer,
                     startScanning = viewModel::startScanning,
                     connectToServer = viewModel::connectToServer,
+                    readCharacteristic = viewModel::readCharacteristic,
                     stopAdvertising = viewModel::stopAdvertising,
                     stopAllBluetoothAction = viewModel::stopAllBluetoothAction,
                     modifier = Modifier.fillMaxSize()
@@ -65,7 +67,8 @@ fun ListScreenContent(
     startAdvertising: (fromServer: Boolean) -> Unit,
     startServer: () -> Unit,
     startScanning: () -> Unit,
-    connectToServer: (ScanResult) -> Unit,
+    connectToServer: (ScannedDevice) -> Unit,
+    readCharacteristic: () -> Unit,
     stopAdvertising: (fromServer: Boolean) -> Unit,
     stopAllBluetoothAction: () -> Unit,
     modifier: Modifier = Modifier,
@@ -100,7 +103,7 @@ fun ListScreenContent(
                         .weight(1f)
                 ) {
                     items(btState.scannedDevices) { item ->
-                        BluetoothDeviceItem(item = item.device, onClick = { connectToServer(item) })
+                        BluetoothDeviceItem(item = item, onClick = { connectToServer(item) })
                     }
                 }
             }
@@ -180,7 +183,24 @@ fun ListScreenContent(
 
             BluetoothAdapterState.Loading -> CircularProgressIndicator()
             BluetoothAdapterState.Disconnected -> Text(text = "Disconnected")
-            is BluetoothAdapterState.Connected -> Text(text = "Connected")
+            is BluetoothAdapterState.Connected -> {
+                Text(text = "Connected")
+                Spacer(modifier = Modifier.height(Grid.Three))
+                Button(onClick = readCharacteristic, modifier = Modifier.padding(Grid.Two)) {
+                    Text(text = "Read Characteristic")
+                }
+                Spacer(modifier = Modifier.height(Grid.Three))
+                Text(text = "Characteristics")
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .weight(1f)
+                ) {
+                    items(btState.characteristics) { item ->
+                        BluetoothCharacteristic(item)
+                    }
+                }
+            }
         }
 
         if (btState != BluetoothAdapterState.Disabled
@@ -199,7 +219,7 @@ fun ListScreenContent(
 
 @Composable
 fun BluetoothDeviceItem(
-    item: BluetoothDevice,
+    item: ScannedDevice,
     modifier: Modifier = Modifier,
     onClick: () -> Unit = {},
 ) {
@@ -207,9 +227,9 @@ fun BluetoothDeviceItem(
         modifier
             .padding(Grid.Half)
             .clickable { onClick() }) {
-        Text(text = item.name.toString())
-        Text(text = item.bondState.toString())
-        Text(text = item.toString())
+        Text(text = item.deviceName)
+        Text(text = item.deviceAddress)
+        Text(text = item.deviceId)
         HorizontalDivider(Modifier.height(Grid.Single))
     }
 }
@@ -219,5 +239,9 @@ fun BluetoothCharacteristic(
     item: Pair<UUID, String>,
     modifier: Modifier = Modifier,
 ) {
-
+    Column(modifier) {
+        Text(text = "id:  ${item.first}")
+        Text(text = "value:  ${item.second}")
+        HorizontalDivider(Modifier.height(Grid.Single))
+    }
 }

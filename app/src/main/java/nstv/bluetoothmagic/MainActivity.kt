@@ -22,7 +22,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-//        this.lifecycle.addObserver(bluetoothStateActivitySubscriber)
+        this.lifecycle.addObserver(bluetoothStateActivitySubscriber)
         setContent {
             BluetoothMagicTheme {
                 Surface(
