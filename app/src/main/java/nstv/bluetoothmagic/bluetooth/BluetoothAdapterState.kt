@@ -10,11 +10,16 @@ sealed interface BluetoothAdapterState {
     data object Disabled : BluetoothAdapterState
     data class Connected(
         val characteristics: List<Pair<UUID, String>> = emptyList(),
-        val connectedDevices: List<BluetoothDevice> = emptyList(),
     ) : BluetoothAdapterState
 
     data object Disconnected : BluetoothAdapterState
     data object Advertising : BluetoothAdapterState
+    data class ServerStarted(
+        val isAdvertising: Boolean,
+        val connectedDevices: List<BluetoothDevice> = emptyList()
+    ) : BluetoothAdapterState
+
+    data object Connecting : BluetoothAdapterState
     data class Scanning(val scannedDevices: List<ScanResult>) : BluetoothAdapterState
     data object Loading : BluetoothAdapterState
     data class Error(val message: String) : BluetoothAdapterState

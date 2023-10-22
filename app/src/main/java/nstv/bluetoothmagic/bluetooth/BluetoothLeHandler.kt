@@ -33,6 +33,8 @@ class BluetoothLeHandler @Inject constructor(
 
     // Added here for quickness, don't do this :)
     private var scope = CoroutineScope(SupervisorJob())
+    private var advertiseScope = CoroutineScope(SupervisorJob())
+    private var isAdvertising: Boolean = false
     private var scannedDevices: List<ScanResult> = emptyList()
     private var connectedDevices: MutableList<BluetoothDevice> = mutableListOf()
 
@@ -63,27 +65,38 @@ class BluetoothLeHandler @Inject constructor(
 
 
     @SuppressLint("MissingPermission")
-    suspend fun startAdvertising() {
-        scope.launch(coroutineDispatcher) {
-            bluetoothLe.advertise(getAdvertiseParams()) { advertiseResult ->
-                when (advertiseResult) {
-                    ADVERTISE_STARTED -> {
-                        bluetoothStateRepository.updateBluetoothAdapterState(
-                            BluetoothAdapterState.Advertising
-                        )
-                        launch {
-                            delay(AdvertiseTimeout.toLong())
-                            stopAction()
-                        }
-                    }
-
-                    else -> {
-                        Log.e("BluetoothLeHandler", "Error advertising: $advertiseResult")
-                        bluetoothStateRepository.updateBluetoothAdapterState(
-                            BluetoothAdapterState.Error(
-                                "$advertiseResult: Error advertising"
+    suspend fun startAdvertising(fromServer: Boolean) {
+        isAdvertising = true
+        val timeout: Int = if (fromServer) 0 else AdvertiseTimeout
+        scope.launch {
+            advertiseScope.launch(coroutineDispatcher) {
+                bluetoothLe.advertise(getAdvertiseParams()) { advertiseResult ->
+                    when (advertiseResult) {
+                        ADVERTISE_STARTED -> {
+                            bluetoothStateRepository.updateBluetoothAdapterState(
+                                if (fromServer) {
+                                    BluetoothAdapterState.ServerStarted(true)
+                                } else {
+                                    BluetoothAdapterState.Advertising
+                                }
                             )
-                        )
+                            if (timeout != 0) {
+                                launch {
+                                    delay(timeout.toLong())
+                                    stopAdvertising(fromServer)
+                                }
+                            }
+                        }
+
+                        else -> {
+                            isAdvertising = false
+                            Log.e("BluetoothLeHandler", "Error advertising: $advertiseResult")
+                            bluetoothStateRepository.updateBluetoothAdapterState(
+                                BluetoothAdapterState.Error(
+                                    "$advertiseResult: Error advertising"
+                                )
+                            )
+                        }
                     }
                 }
             }
@@ -91,15 +104,24 @@ class BluetoothLeHandler @Inject constructor(
     }
 
     suspend fun startServer() {
+        bluetoothStateRepository.updateBluetoothAdapterState(BluetoothAdapterState.Loading)
         scope.launch(coroutineDispatcher) {
             val server = bluetoothLe.openGattServer(
                 services = listOf(GardenService.getGattService())
             ) {
+                bluetoothStateRepository.updateBluetoothAdapterState(
+                    BluetoothAdapterState.ServerStarted(
+                        false
+                    )
+                )
                 this.connectRequests.collect { request ->
                     request.accept {
                         connectedDevices.add(request.device)
                         bluetoothStateRepository.updateBluetoothAdapterState(
-                            BluetoothAdapterState.Connected(connectedDevices = connectedDevices)
+                            BluetoothAdapterState.ServerStarted(
+                                isAdvertising = isAdvertising,
+                                connectedDevices = connectedDevices
+                            )
                         )
                     }
                 }
@@ -127,10 +149,10 @@ class BluetoothLeHandler @Inject constructor(
     }
 
     @SuppressLint("MissingPermission")
-    suspend fun connect(device: ScanResult) {
-        bluetoothStateRepository.updateBluetoothAdapterState(BluetoothAdapterState.Loading)
+    suspend fun connectToServer(scanResult: ScanResult) {
+        bluetoothStateRepository.updateBluetoothAdapterState(BluetoothAdapterState.Connecting)
         scope.launch(coroutineDispatcher) {
-            bluetoothLe.connectGatt(device.device) {
+            bluetoothLe.connectGatt(scanResult.device) {
                 val characteristics: List<Pair<UUID, String>> =
                     getService(serviceUUID)?.characteristics?.map {
                         it.uuid to it.properties.toString()
@@ -146,14 +168,25 @@ class BluetoothLeHandler @Inject constructor(
         }
     }
 
-    fun stopAction() {
-        restartScope()
-        bluetoothStateRepository.updateBluetoothAdapterStateToCurrentState()
+    fun stopAdvertising(fromServer: Boolean) {
+        isAdvertising = false
+        advertiseScope.cancel()
+        advertiseScope = CoroutineScope(SupervisorJob())
+        if (fromServer) {
+            bluetoothStateRepository.updateBluetoothAdapterState(
+                BluetoothAdapterState.ServerStarted(
+                    false
+                )
+            )
+        } else {
+            bluetoothStateRepository.updateBluetoothAdapterStateToCurrentState()
+        }
     }
 
-    private fun restartScope() {
+    fun stopEverything() {
         scope.cancel()
         scope = CoroutineScope(SupervisorJob())
+        bluetoothStateRepository.updateBluetoothAdapterStateToCurrentState()
     }
 }
 

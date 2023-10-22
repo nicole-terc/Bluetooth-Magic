@@ -1,5 +1,6 @@
 package nstv.bluetoothmagic.ui.screen.listView
 
+import androidx.bluetooth.ScanResult
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -11,7 +12,6 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import nstv.bluetoothmagic.bluetooth.BluetoothAdapterState
 import nstv.bluetoothmagic.bluetooth.BluetoothLeHandler
-import nstv.bluetoothmagic.bluetooth.BluetoothStateRepository
 import javax.inject.Inject
 
 sealed interface ListScreenUiState {
@@ -37,15 +37,27 @@ class ListScreenViewModel @Inject constructor(
             initialValue = ListScreenUiState.Loading,
         )
 
+    fun startAdvertising(fromServer: Boolean) {
+        viewModelScope.launch {
+            bluetoothLeHandler.startAdvertising(fromServer)
+        }
+    }
+
+    fun startServer() {
+        viewModelScope.launch {
+            bluetoothLeHandler.startServer()
+        }
+    }
+
     fun startScanning() {
         viewModelScope.launch {
             bluetoothLeHandler.scan()
         }
     }
 
-    fun startAdvertising() {
+    fun connectToServer(scanResult: ScanResult) {
         viewModelScope.launch {
-            bluetoothLeHandler.startAdvertising()
+            bluetoothLeHandler.connectToServer(scanResult)
         }
     }
 
@@ -53,7 +65,11 @@ class ListScreenViewModel @Inject constructor(
         bluetoothLeHandler.bluetoothEnabled()
     }
 
-    fun stopBluetoothAction() {
-        bluetoothLeHandler.stopAction()
+    fun stopAllBluetoothAction() {
+        bluetoothLeHandler.stopEverything()
+    }
+
+    fun stopAdvertising(fromServer: Boolean) {
+        bluetoothLeHandler.stopAdvertising(fromServer)
     }
 }

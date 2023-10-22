@@ -1,9 +1,12 @@
 package nstv.bluetoothmagic.ui.screen.listView
 
+import androidx.bluetooth.BluetoothDevice
+import androidx.bluetooth.ScanResult
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -26,6 +29,7 @@ import nstv.bluetoothmagic.bluetooth.BluetoothAdapterState
 import nstv.bluetoothmagic.ui.components.BluetoothDisabledOverlay
 import nstv.bluetoothmagic.ui.components.PermissionsWrapper
 import nstv.bluetoothmagic.ui.theme.Grid
+import java.util.UUID
 
 @Composable
 fun ListScreenView(
@@ -40,10 +44,13 @@ fun ListScreenView(
             is ListScreenUiState.Loaded -> {
                 ListScreenContent(
                     uiState = uiState as ListScreenUiState.Loaded,
-                    startScanning = viewModel::startScanning,
-                    startAdvertising = viewModel::startAdvertising,
                     onBluetoothEnabled = viewModel::onBluetoothEnabled,
-                    stopBluetoothAction = viewModel::stopBluetoothAction,
+                    startAdvertising = viewModel::startAdvertising,
+                    startServer = viewModel::startServer,
+                    startScanning = viewModel::startScanning,
+                    connectToServer = viewModel::connectToServer,
+                    stopAdvertising = viewModel::stopAdvertising,
+                    stopAllBluetoothAction = viewModel::stopAllBluetoothAction,
                     modifier = Modifier.fillMaxSize()
                 )
             }
@@ -54,10 +61,13 @@ fun ListScreenView(
 @Composable
 fun ListScreenContent(
     uiState: ListScreenUiState.Loaded,
-    startScanning: () -> Unit,
-    startAdvertising: () -> Unit,
     onBluetoothEnabled: () -> Unit,
-    stopBluetoothAction: () -> Unit,
+    startAdvertising: (fromServer: Boolean) -> Unit,
+    startServer: () -> Unit,
+    startScanning: () -> Unit,
+    connectToServer: (ScanResult) -> Unit,
+    stopAdvertising: (fromServer: Boolean) -> Unit,
+    stopAllBluetoothAction: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val btState = uiState.bluetoothState
@@ -90,17 +100,41 @@ fun ListScreenContent(
                         .weight(1f)
                 ) {
                     items(btState.scannedDevices) { item ->
-                        Column(Modifier.padding(Grid.Half)) {
-                            Text(text = item.device.name.toString())
-                            Text(text = item.device.bondState.toString())
-                            Text(text = item.timestampNanos.toString())
-                            HorizontalDivider(Modifier.height(Grid.Single))
-                        }
+                        BluetoothDeviceItem(item = item.device, onClick = { connectToServer(item) })
                     }
                 }
             }
 
             BluetoothAdapterState.Advertising -> Text(text = "Advertising")
+            BluetoothAdapterState.Connecting -> Text(text = "Connecting")
+            is BluetoothAdapterState.ServerStarted -> {
+                Text(text = "Server Started")
+                Spacer(modifier = Modifier.height(Grid.Three))
+                Button(
+                    onClick = {
+                        if (btState.isAdvertising) {
+                            stopAdvertising(true)
+                        } else {
+                            startAdvertising(true)
+                        }
+                    },
+                    modifier = Modifier.padding(Grid.Two)
+                ) {
+                    Text(text = if (btState.isAdvertising) "Stop Advertising" else "Start Advertising")
+                }
+                Spacer(modifier = Modifier.height(Grid.Three))
+                Text(text = "Connected Devices")
+                LazyColumn(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .weight(1f)
+                ) {
+                    items(btState.connectedDevices) { item ->
+                        BluetoothDeviceItem(item)
+                    }
+                }
+            }
+
             BluetoothAdapterState.Enabled -> {
                 Column(
                     Modifier
@@ -110,11 +144,20 @@ fun ListScreenContent(
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Button(
-                        onClick = startAdvertising,
+                        onClick = { startAdvertising(false) },
                         modifier = Modifier.fillMaxWidth(),
                     ) {
                         Text(
                             text = "Start Advertising",
+                            style = MaterialTheme.typography.headlineSmall
+                        )
+                    }
+                    Button(
+                        onClick = startServer,
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(
+                            text = "Start Server",
                             style = MaterialTheme.typography.headlineSmall
                         )
                     }
@@ -145,11 +188,36 @@ fun ListScreenContent(
             && btState != BluetoothAdapterState.Enabled
         ) {
             Button(
-                onClick = stopBluetoothAction,
+                onClick = stopAllBluetoothAction,
                 modifier = Modifier.padding(Grid.Two)
             ) {
-                Text(text = "Stop")
+                Text(text = "Stop Everything")
             }
         }
     }
+}
+
+@Composable
+fun BluetoothDeviceItem(
+    item: BluetoothDevice,
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit = {},
+) {
+    Column(
+        modifier
+            .padding(Grid.Half)
+            .clickable { onClick() }) {
+        Text(text = item.name.toString())
+        Text(text = item.bondState.toString())
+        Text(text = item.toString())
+        HorizontalDivider(Modifier.height(Grid.Single))
+    }
+}
+
+@Composable
+fun BluetoothCharacteristic(
+    item: Pair<UUID, String>,
+    modifier: Modifier = Modifier,
+) {
+
 }
