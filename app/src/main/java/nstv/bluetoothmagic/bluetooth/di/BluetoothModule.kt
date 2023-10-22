@@ -1,4 +1,4 @@
-package nstv.bluetoothmagic.bluetooth
+package nstv.bluetoothmagic.bluetooth.di
 
 import android.app.Application
 import android.bluetooth.BluetoothAdapter

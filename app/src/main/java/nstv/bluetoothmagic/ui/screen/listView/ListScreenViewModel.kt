@@ -1,7 +1,6 @@
 package nstv.bluetoothmagic.ui.screen.listView
 
-import android.util.Log
-import androidx.bluetooth.ScanResult
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -11,9 +10,10 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import nstv.bluetoothmagic.bluetooth.BluetoothAdapterState
+import nstv.bluetoothmagic.bluetooth.data.BluetoothAdapterState
 import nstv.bluetoothmagic.bluetooth.BluetoothLeHandler
-import nstv.bluetoothmagic.bluetooth.ScannedDevice
+import nstv.bluetoothmagic.bluetooth.BluetoothLeHandlerOldApi
+import nstv.bluetoothmagic.bluetooth.data.ScannedDevice
 import javax.inject.Inject
 
 sealed interface ListScreenUiState {
@@ -28,6 +28,7 @@ sealed interface ListScreenUiState {
 @HiltViewModel
 class ListScreenViewModel @Inject constructor(
     private val bluetoothLeHandler: BluetoothLeHandler,
+    private val bluetoothLeHandlerOldApi: BluetoothLeHandlerOldApi,
 ) : ViewModel() {
 
     val uiState: StateFlow<ListScreenUiState> = bluetoothLeHandler.bluetoothState()
@@ -53,23 +54,22 @@ class ListScreenViewModel @Inject constructor(
 
     fun startScanning() {
         viewModelScope.launch {
-            bluetoothLeHandler.scan()
+//            bluetoothLeHandler.scan()
+            bluetoothLeHandlerOldApi.scan()
         }
     }
 
-    fun connectToServer(scanResult: ScannedDevice) {
+    fun connectToServer(context: Context, scanResult: ScannedDevice) {
         viewModelScope.launch {
-            bluetoothLeHandler.connectToServer(scanResult)
+//            bluetoothLeHandler.connectToServer(scanResult)
+            bluetoothLeHandlerOldApi.connectToServer(context, scanResult)
         }
-//        viewModelScope.launch {
-//            val message = bluetoothLeHandler.getMessageBle()
-//            Log.d("ViewModel", "MESSAGE HERE: $message")
-//        }
     }
 
     fun readCharacteristic() {
         viewModelScope.launch {
-            bluetoothLeHandler.readCharacteristic()
+//            bluetoothLeHandler.readCharacteristic()
+            bluetoothLeHandlerOldApi.readCharacteristic()
         }
     }
 
@@ -79,6 +79,7 @@ class ListScreenViewModel @Inject constructor(
 
     fun stopAllBluetoothAction() {
         bluetoothLeHandler.stopEverything()
+        bluetoothLeHandlerOldApi.stopEverything()
     }
 
     fun stopAdvertising(fromServer: Boolean) {

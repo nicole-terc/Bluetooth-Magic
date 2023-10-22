@@ -1,7 +1,6 @@
 package nstv.bluetoothmagic.ui.screen.listView
 
-import androidx.bluetooth.BluetoothDevice
-import androidx.bluetooth.ScanResult
+import android.content.Context
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -20,13 +19,15 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import nstv.bluetoothmagic.bluetooth.BluetoothAdapterState
-import nstv.bluetoothmagic.bluetooth.ScannedDevice
+import nstv.bluetoothmagic.bluetooth.data.BluetoothAdapterState
+import nstv.bluetoothmagic.bluetooth.data.ScannedDevice
 import nstv.bluetoothmagic.ui.components.BluetoothDisabledOverlay
 import nstv.bluetoothmagic.ui.components.PermissionsWrapper
 import nstv.bluetoothmagic.ui.theme.Grid
@@ -58,6 +59,11 @@ fun ListScreenView(
             }
         }
     }
+    DisposableEffect(viewModel) {
+        onDispose {
+            viewModel.stopAllBluetoothAction()
+        }
+    }
 }
 
 @Composable
@@ -67,13 +73,14 @@ fun ListScreenContent(
     startAdvertising: (fromServer: Boolean) -> Unit,
     startServer: () -> Unit,
     startScanning: () -> Unit,
-    connectToServer: (ScannedDevice) -> Unit,
+    connectToServer: (Context, ScannedDevice) -> Unit,
     readCharacteristic: () -> Unit,
     stopAdvertising: (fromServer: Boolean) -> Unit,
     stopAllBluetoothAction: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val btState = uiState.bluetoothState
+    val context = LocalContext.current
 
     Column(
         modifier = modifier,
@@ -103,7 +110,9 @@ fun ListScreenContent(
                         .weight(1f)
                 ) {
                     items(btState.scannedDevices) { item ->
-                        BluetoothDeviceItem(item = item, onClick = { connectToServer(item) })
+                        BluetoothDeviceItem(
+                            item = item,
+                            onClick = { connectToServer(context, item) })
                     }
                 }
             }

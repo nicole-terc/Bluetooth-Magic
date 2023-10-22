@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.bluetooth.BluetoothGatt
 import android.bluetooth.BluetoothGattCallback
 import android.bluetooth.BluetoothGattCharacteristic
+import android.bluetooth.BluetoothGattService
 import android.bluetooth.le.BluetoothLeScanner
 import android.bluetooth.le.ScanCallback
 import android.bluetooth.le.ScanFilter
@@ -12,20 +13,35 @@ import android.bluetooth.le.ScanSettings
 import android.content.Context
 import android.os.ParcelUuid
 import android.util.Log
+import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
+import nstv.bluetoothmagic.bluetooth.data.BluetoothAdapterState
+import nstv.bluetoothmagic.bluetooth.data.BluetoothStateRepository
+import nstv.bluetoothmagic.bluetooth.data.ScannedDevice
+import nstv.bluetoothmagic.bluetooth.data.toScannedDevice
+import nstv.bluetoothmagic.di.IoDispatcher
 import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class BluetoothLeHandlerOldApi @Inject constructor(
+    @IoDispatcher private val coroutineDispatcher: CoroutineDispatcher,
     private val bluetoothLeScanner: BluetoothLeScanner,
     private val bluetoothStateRepository: BluetoothStateRepository,
 ) {
+    private var scope = CoroutineScope(SupervisorJob())
 
     private var scannedDevices = listOf<ScanResult>()
     private var gattServer: BluetoothGatt? = null
 
     private var characteristicMap = mutableMapOf<UUID, String>()
+    private var characteristicsRefMap = mutableMapOf<UUID, BluetoothGattCharacteristic>()
+
+    private var myService: BluetoothGattService? = null
 
     val scanCallback = object : ScanCallback() {
         override fun onScanResult(callbackType: Int, result: ScanResult?) {
@@ -34,6 +50,11 @@ class BluetoothLeHandlerOldApi @Inject constructor(
             result?.let { scanResult ->
                 scannedDevices =
                     (scannedDevices + scanResult).distinctBy { it.device.address }
+                bluetoothStateRepository.updateBluetoothAdapterState(
+                    BluetoothAdapterState.Scanning(
+                        scannedDevices.map { it.toScannedDevice() }
+                    )
+                )
             }
         }
 
@@ -51,6 +72,11 @@ class BluetoothLeHandlerOldApi @Inject constructor(
     @SuppressLint("MissingPermission")
     fun scan() {
         scannedDevices = emptyList()
+        bluetoothStateRepository.updateBluetoothAdapterState(
+            BluetoothAdapterState.Scanning(
+                emptyList()
+            )
+        )
         bluetoothLeScanner.startScan(
             listOf(
                 ScanFilter.Builder().setServiceUuid(ParcelUuid(GardenService.serviceUUID))
@@ -69,10 +95,19 @@ class BluetoothLeHandlerOldApi @Inject constructor(
     @SuppressLint("MissingPermission")
     fun connectToServer(context: Context, scannedDevice: ScannedDevice) {
         bluetoothStateRepository.updateBluetoothAdapterState(BluetoothAdapterState.Connecting)
+        stopScan()
         val device =
             scannedDevices.first { it.device.address == scannedDevice.deviceAddress }.device
         gattServer = device.connectGatt(context, false, gattCallback)
+    }
 
+    @SuppressLint("MissingPermission")
+    fun readCharacteristic() {
+        scope.launch(coroutineDispatcher) {
+            val characteristicRead =
+                gattServer?.readCharacteristic(characteristicsRefMap[GardenService.ingredientCharacteristicUUID])
+            Log.d("BluetoothLeHandler", "readCharacteristic: $characteristicRead")
+        }
     }
 
     val gattCallback = object : BluetoothGattCallback() {
@@ -83,13 +118,7 @@ class BluetoothLeHandlerOldApi @Inject constructor(
             when (newState) {
                 BluetoothGatt.STATE_CONNECTED -> {
                     bluetoothStateRepository.updateBluetoothAdapterState(
-                        BluetoothAdapterState.Connected(
-                            gatt?.services?.flatMap { service ->
-                                service.characteristics.map { characteristic ->
-                                    characteristic.uuid to ""
-                                }
-                            } ?: emptyList()
-                        )
+                        BluetoothAdapterState.Connected(emptyList())
                     )
                     gatt?.discoverServices()
                 }
@@ -102,15 +131,24 @@ class BluetoothLeHandlerOldApi @Inject constructor(
 
         @SuppressLint("MissingPermission")
         override fun onServicesDiscovered(gatt: BluetoothGatt?, status: Int) {
-            Log.d("BluetoothLeHandler", "onServicesDiscovered: $status")
             super.onServicesDiscovered(gatt, status)
             gatt?.services?.forEach { service ->
                 Log.d("BluetoothLeHandler", "onServicesDiscovered: ${service.uuid}")
-                service.characteristics.forEach { characteristic ->
-                    Log.d("BluetoothLeHandler", "onServicesDiscovered: ${characteristic.uuid}")
-                    gatt.readCharacteristic(characteristic)
+                if (service.uuid == GardenService.serviceUUID) {
+                    myService = service
+                    service.characteristics.forEach { characteristic ->
+                        Log.d(
+                            "BluetoothLeHandler",
+                            "onCharacteristicDiscovered: ${characteristic.uuid}"
+                        )
+                        characteristicsRefMap[characteristic.uuid] = characteristic
+                        characteristicMap[characteristic.uuid] = ""
+                    }
                 }
             }
+            bluetoothStateRepository.updateBluetoothAdapterState(
+                BluetoothAdapterState.Connected(characteristicMap.toList())
+            )
         }
 
         override fun onCharacteristicRead(
@@ -122,13 +160,47 @@ class BluetoothLeHandlerOldApi @Inject constructor(
             super.onCharacteristicRead(gatt, characteristic, value, status)
             Log.d(
                 "BluetoothLeHandler",
-                "onCharacteristicRead: ${characteristic.uuid} -> ${value.toString(Charsets.UTF_8)}"
+                "onCharacteristicRead: ${characteristic.uuid}"
             )
-            characteristicMap[characteristic.uuid] = value.toString(Charsets.UTF_8)
+
+            characteristicMap[characteristic.uuid] = value.decodeToString()
 
             bluetoothStateRepository.updateBluetoothAdapterState(
                 BluetoothAdapterState.Connected(characteristicMap.toList())
             )
         }
+
+        override fun onCharacteristicRead(
+            gatt: BluetoothGatt?,
+            characteristic: BluetoothGattCharacteristic?,
+            status: Int
+        ) {
+            super.onCharacteristicRead(gatt, characteristic, status)
+            Log.d(
+                "BluetoothLeHandler",
+                "onCharacteristicRead OLD: ${characteristic?.uuid}"
+            )
+            characteristic?.let {
+                characteristicMap[characteristic.uuid] = characteristic.value.decodeToString()
+            }
+            bluetoothStateRepository.updateBluetoothAdapterState(
+                BluetoothAdapterState.Connected(characteristicMap.toList())
+            )
+        }
+    }
+
+    @SuppressLint("MissingPermission")
+    fun stopEverything() {
+        stopScan()
+        gattServer?.disconnect()
+        gattServer?.close()
+        gattServer = null
+        scannedDevices = emptyList()
+        myService = null
+        characteristicMap = mutableMapOf()
+        characteristicsRefMap = mutableMapOf()
+        bluetoothStateRepository.updateBluetoothAdapterStateToCurrentState()
+        scope.cancel()
+        scope = CoroutineScope(SupervisorJob())
     }
 }

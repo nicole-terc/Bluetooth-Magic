@@ -1,13 +1,11 @@
 package nstv.bluetoothmagic.bluetooth
 
-
 import android.annotation.SuppressLint
 import android.os.Build
 import android.util.Log
 import androidx.bluetooth.AdvertiseParams
 import androidx.bluetooth.BluetoothDevice
 import androidx.bluetooth.BluetoothLe
-import androidx.bluetooth.BluetoothLe.Companion.ADVERTISE_STARTED
 import androidx.bluetooth.GattServerRequest
 import androidx.bluetooth.ScanFilter
 import androidx.bluetooth.ScanResult
@@ -18,7 +16,10 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import nstv.bluetoothmagic.bluetooth.GardenService.serviceUUID
+import nstv.bluetoothmagic.bluetooth.data.BluetoothAdapterState
+import nstv.bluetoothmagic.bluetooth.data.BluetoothStateRepository
+import nstv.bluetoothmagic.bluetooth.data.ScannedDevice
+import nstv.bluetoothmagic.bluetooth.data.toScannedDevice
 import nstv.bluetoothmagic.di.IoDispatcher
 import java.util.UUID
 import javax.inject.Inject
@@ -58,7 +59,7 @@ class BluetoothLeHandler @Inject constructor(
                 shouldIncludeDeviceName = true,
                 isConnectable = true,
                 isDiscoverable = true,
-                serviceUuids = listOf(serviceUUID),
+                serviceUuids = listOf(GardenService.serviceUUID),
                 durationMillis = AdvertiseTimeout,
             )
         } else {
@@ -66,7 +67,7 @@ class BluetoothLeHandler @Inject constructor(
             AdvertiseParams(
                 shouldIncludeDeviceName = false,
                 isConnectable = true,
-                serviceUuids = listOf(serviceUUID),
+                serviceUuids = listOf(GardenService.serviceUUID),
                 durationMillis = AdvertiseTimeout,
             )
         }
@@ -81,7 +82,7 @@ class BluetoothLeHandler @Inject constructor(
             advertiseScope.launch(coroutineDispatcher) {
                 bluetoothLe.advertise(getAdvertiseParams()) { advertiseResult ->
                     when (advertiseResult) {
-                        ADVERTISE_STARTED -> {
+                        BluetoothLe.ADVERTISE_STARTED -> {
                             bluetoothStateRepository.updateBluetoothAdapterState(
                                 if (fromServer) {
                                     BluetoothAdapterState.ServerStarted(true)
@@ -116,11 +117,11 @@ class BluetoothLeHandler @Inject constructor(
     suspend fun scan(scanFilters: List<ScanFilter> = emptyList()) {
         scannedDevices = emptyList()
         bluetoothStateRepository.updateBluetoothAdapterState(
-            BluetoothAdapterState.Scanning(scannedDevices.map { it.toScannedDevice() })
+            BluetoothAdapterState.Scanning(emptyList())
         )
         scope.launch(coroutineDispatcher) {
             scanningScope.launch {
-                bluetoothLe.scan(scanFilters + ScanFilter(serviceUuid = serviceUUID))
+                bluetoothLe.scan(scanFilters + ScanFilter(serviceUuid = GardenService.serviceUUID))
                     .collect { scanResult ->
                         scannedDevices =
                             (scannedDevices + scanResult).distinctBy { it.deviceAddress }
@@ -196,7 +197,7 @@ class BluetoothLeHandler @Inject constructor(
             bluetoothLe.connectGatt(device) {
                 currentServerDevice = device
                 val characteristics: List<Pair<UUID, String>> =
-                    getService(serviceUUID)?.characteristics?.map {
+                    getService(GardenService.serviceUUID)?.characteristics?.map {
                         it.uuid to it.properties.toString()
                     } ?: emptyList()
 
@@ -243,8 +244,8 @@ class BluetoothLeHandler @Inject constructor(
                     bluetoothLe.connectGatt(serverDevice) {
                         val characteristic = async {
                             readCharacteristic(
-                                getService(serviceUUID)?.getCharacteristic(
-                                    GardenService.characteristicUUID
+                                getService(GardenService.serviceUUID)?.getCharacteristic(
+                                    GardenService.ingredientCharacteristicUUID
                                 )!!
                             )
                         }
@@ -255,7 +256,7 @@ class BluetoothLeHandler @Inject constructor(
                                 bluetoothStateRepository.updateBluetoothAdapterState(
                                     BluetoothAdapterState.Connected(
                                         characteristics = listOf(
-                                            GardenService.characteristicUUID to
+                                            GardenService.ingredientCharacteristicUUID to
                                                     (result.getOrNull()?.toString(Charsets.UTF_8)
                                                         ?: "")
                                         ),
@@ -300,8 +301,8 @@ class BluetoothLeHandler @Inject constructor(
     fun stopEverything() {
         scope.cancel()
         scope = CoroutineScope(SupervisorJob())
+        scannedDevices = emptyList()
+        connectedDevices = mutableListOf()
         bluetoothStateRepository.updateBluetoothAdapterStateToCurrentState()
     }
 }
-
-

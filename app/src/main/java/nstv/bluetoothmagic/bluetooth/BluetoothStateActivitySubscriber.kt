@@ -13,6 +13,7 @@ import androidx.lifecycle.LifecycleOwner
 import dagger.hilt.android.qualifiers.ActivityContext
 import dagger.hilt.android.scopes.ActivityScoped
 import nstv.bluetoothmagic.MainActivity
+import nstv.bluetoothmagic.bluetooth.data.BluetoothStateRepository
 import javax.inject.Inject
 
 @ActivityScoped
@@ -25,9 +26,9 @@ class BluetoothStateActivitySubscriber @Inject constructor(
     private val intentFilter = IntentFilter(BluetoothAdapter.ACTION_STATE_CHANGED)
     private lateinit var bluetoothBroadcastReceiver: BroadcastReceiver
 
-//    init {
-//        (context as? MainActivity)?.lifecycle?.addObserver(this)
-//    }
+    init {
+        (context as? MainActivity)?.lifecycle?.addObserver(this)
+    }
 
     override fun onCreate(owner: LifecycleOwner) {
         super.onCreate(owner)

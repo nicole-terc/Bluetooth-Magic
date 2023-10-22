@@ -1,42 +1,7 @@
-package nstv.bluetoothmagic.bluetooth
+package nstv.bluetoothmagic.bluetooth.data
 
-import android.annotation.SuppressLint
 import android.bluetooth.BluetoothAdapter
-import androidx.bluetooth.BluetoothDevice
-import androidx.bluetooth.ScanResult
-import android.bluetooth.le.ScanResult as OldResult
 import java.util.UUID
-
-data class ScannedDevice(
-    val deviceName: String,
-    val deviceId: String,
-    val deviceAddress: String,
-)
-
-@SuppressLint("MissingPermission")
-fun OldResult.toScannedDevice(): ScannedDevice {
-    return ScannedDevice(
-        deviceName = device.name ?: "Unknown",
-        deviceId = device.uuids?.firstOrNull()?.uuid?.toString() ?: "Unknown",
-        deviceAddress = device.address,
-    )
-}
-
-fun ScanResult.toScannedDevice(): ScannedDevice {
-    return ScannedDevice(
-        deviceName = device.name ?: "Unknown",
-        deviceId = device.id.toString(),
-        deviceAddress = deviceAddress.address,
-    )
-}
-
-fun BluetoothDevice.toScannedDevice(): ScannedDevice {
-    return ScannedDevice(
-        deviceName = name ?: "Unknown",
-        deviceId = id.toString(),
-        deviceAddress = "Unknown",
-    )
-}
 
 sealed interface BluetoothAdapterState {
     data object Enabled : BluetoothAdapterState

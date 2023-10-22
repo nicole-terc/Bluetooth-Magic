@@ -1,8 +1,10 @@
-package nstv.bluetoothmagic.bluetooth
+package nstv.bluetoothmagic.bluetooth.data
 
 import android.bluetooth.BluetoothAdapter
 import android.util.Log
 import kotlinx.coroutines.flow.MutableStateFlow
+import nstv.bluetoothmagic.bluetooth.data.BluetoothAdapterState
+import nstv.bluetoothmagic.bluetooth.data.toBluetoothAdapterState
 import javax.inject.Inject
 import javax.inject.Singleton
 
