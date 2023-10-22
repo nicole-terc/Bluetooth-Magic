@@ -1,27 +1,23 @@
 package nstv.bluetoothmagic.ui.screen.listView
 
-import androidx.bluetooth.ScanResult
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import nstv.bluetoothmagic.bluetooth.BluetoothAdapterState
 import nstv.bluetoothmagic.bluetooth.BluetoothLeHandler
+import nstv.bluetoothmagic.bluetooth.BluetoothStateRepository
 import javax.inject.Inject
-
-enum class BluetoothState {
-    ENABLED,
-    DISABLED,
-    ADVERTISING,
-    SCANNING,
-}
 
 sealed interface ListScreenUiState {
     data object Loading : ListScreenUiState
-    data object Ready : ListScreenUiState
-    data object Advertising : ListScreenUiState
-    data class Scanning(
-        val data: List<ScanResult>,
+    data class Loaded(
+        val bluetoothState: BluetoothAdapterState,
     ) : ListScreenUiState
 
     data class Error(val message: String) : ListScreenUiState
@@ -32,24 +28,32 @@ class ListScreenViewModel @Inject constructor(
     private val bluetoothLeHandler: BluetoothLeHandler,
 ) : ViewModel() {
 
-    // TODO: Only make it ready when bluetooth is enabled
-    val uiState = MutableStateFlow<ListScreenUiState>(ListScreenUiState.Ready)
+    val uiState: StateFlow<ListScreenUiState> = bluetoothLeHandler.bluetoothState()
+        .map<BluetoothAdapterState, ListScreenUiState>(ListScreenUiState::Loaded)
+        .onStart { emit(ListScreenUiState.Loading) }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000L),
+            initialValue = ListScreenUiState.Loading,
+        )
 
     fun startScanning() {
         viewModelScope.launch {
-            bluetoothLeHandler.scan().collect { scanResult ->
-                uiState.value =
-                    (uiState.value as? ListScreenUiState.Scanning)?.let { currentState ->
-                        ListScreenUiState.Scanning(data = currentState.data + scanResult)
-                    } ?: ListScreenUiState.Scanning(data = listOf(scanResult))
-            }
+            bluetoothLeHandler.scan()
         }
     }
 
     fun startAdvertising() {
         viewModelScope.launch {
             bluetoothLeHandler.startAdvertising()
-            uiState.value = ListScreenUiState.Advertising
         }
+    }
+
+    fun onBluetoothEnabled() {
+        bluetoothLeHandler.bluetoothEnabled()
+    }
+
+    fun stopBluetoothAction() {
+        bluetoothLeHandler.stopAction()
     }
 }
