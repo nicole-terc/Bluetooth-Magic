@@ -12,9 +12,11 @@ sealed interface BluetoothAdapterState {
 
     data object Disconnected : BluetoothAdapterState
     data object Advertising : BluetoothAdapterState
+    data class Discovering(val scannedDevices: List<ScannedDevice>) : BluetoothAdapterState
     data class ServerStarted(
         val isAdvertising: Boolean,
-        val connectedDevices: List<ScannedDevice> = emptyList()
+        val connectedDevices: List<ScannedDevice> = emptyList(),
+        val pairedDevices: List<ScannedDevice> = emptyList(),
     ) : BluetoothAdapterState
 
     data object Connecting : BluetoothAdapterState

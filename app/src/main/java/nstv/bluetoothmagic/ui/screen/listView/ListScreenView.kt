@@ -210,6 +210,8 @@ fun ListScreenContent(
                     }
                 }
             }
+
+            is BluetoothAdapterState.Discovering -> Text(text = "Discovering")
         }
 
         if (btState != BluetoothAdapterState.Disabled
