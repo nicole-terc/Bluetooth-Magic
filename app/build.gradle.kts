@@ -65,6 +65,8 @@ dependencies {
     kapt(libs.hilt.compiler)
     implementation(libs.accompanist.permissions)
     implementation(libs.androidx.bluetooth)
+    implementation(libs.bundles.room)
+    kapt(libs.room.compiler)
 
     testImplementation(libs.junit4)
     androidTestImplementation(libs.androidx.test.ext)
