@@ -3,8 +3,6 @@ package nstv.bluetoothmagic.bluetooth.data
 import android.bluetooth.BluetoothAdapter
 import android.util.Log
 import kotlinx.coroutines.flow.MutableStateFlow
-import nstv.bluetoothmagic.bluetooth.data.BluetoothAdapterState
-import nstv.bluetoothmagic.bluetooth.data.toBluetoothAdapterState
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -31,7 +29,7 @@ class BluetoothStateRepository @Inject constructor(
         updateBluetoothAdapterState(bluetoothAdapter.state)
     }
 
-    fun getCurrentState()  = bluetoothAdapterState.value
+    fun getCurrentState() = bluetoothAdapterState.value
 
     fun isBluetoothEnabled() = bluetoothAdapter.isEnabled
 }

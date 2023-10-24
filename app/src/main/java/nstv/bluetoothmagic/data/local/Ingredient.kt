@@ -112,4 +112,6 @@ object IngredientCombinations {
     )
 
     fun getRandom() = list.random()
+
+    fun getIngredientForId(id: Int): Ingredient? = list.find { it.id == id }
 }

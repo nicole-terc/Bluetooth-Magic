@@ -1,25 +1,36 @@
 package nstv.bluetoothmagic.ui.screen.garden
 
 import android.content.Context
+import androidx.bluetooth.BluetoothDevice
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collect
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import nstv.bluetoothmagic.bluetooth.BluetoothLeHandler
 import nstv.bluetoothmagic.bluetooth.BluetoothLeHandlerOldApi
+import nstv.bluetoothmagic.bluetooth.GardenService
 import nstv.bluetoothmagic.bluetooth.data.BluetoothAdapterState
 import nstv.bluetoothmagic.bluetooth.data.ScannedDevice
 import nstv.bluetoothmagic.data.local.Ingredient
+import nstv.bluetoothmagic.domain.AddOneToIngredientCount
 import nstv.bluetoothmagic.domain.GetAllIngredientsUseCase
+import nstv.bluetoothmagic.domain.GetMainIngredientIdUseCase
+import java.util.UUID
 import javax.inject.Inject
 
 data class GardenUiState(
-    val ingredients: List<Ingredient> = emptyList(),
     val bluetoothState: BluetoothAdapterState = BluetoothAdapterState.Loading,
-    val isLoading: Boolean = true,
 )
 
 @HiltViewModel
@@ -27,33 +38,53 @@ class GardenScreenViewModel @Inject constructor(
     private val bluetoothLeHandler: BluetoothLeHandler,
     private val bluetoothLeHandlerOldApi: BluetoothLeHandlerOldApi,
     private val getAllIngredientsUseCase: GetAllIngredientsUseCase,
+    private val getMainIngredientIdUseCase: GetMainIngredientIdUseCase,
+    private val addOneToIngredientCount: AddOneToIngredientCount,
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow<GardenUiState>(GardenUiState())
-    val uiState: StateFlow<GardenUiState> = _uiState.asStateFlow()
+    private var mainIngredientId: Int = -1
+    val isInteractingWithBluetooth = MutableStateFlow(false)
+    val ingredients = MutableStateFlow<List<Ingredient>>(emptyList())
+    val uiState: StateFlow<GardenUiState> =
+        bluetoothLeHandler.bluetoothState().map { bluetoothState ->
+            GardenUiState(
+                bluetoothState = bluetoothState,
+            )
+        }.onStart {
+            GardenUiState()
+        }.onEach {
+            loadIngredients()
+        }.stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000L),
+            initialValue = GardenUiState(),
+        )
+
 
     init {
         viewModelScope.launch {
-            getAllIngredientsUseCase().collect {
-                onIngredientsUpdated(it)
-            }
+            mainIngredientId = getMainIngredientIdUseCase()
+            loadIngredients()
+        }
+    }
 
-            bluetoothLeHandler.bluetoothState().collect {
-                onBluetoothStateUpdated(it)
+    // Room was not playing nicely, need to fix this later :(
+    fun loadIngredients() {
+        viewModelScope.launch {
+            getAllIngredientsUseCase().collectLatest {
+                ingredients.value = it
             }
         }
     }
 
-    private fun onIngredientsUpdated(ingredients: List<Ingredient>) {
-        viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(ingredients = ingredients, isLoading = false)
-        }
+    fun searchForIngredient() {
+        startInteractingWithBluetooth()
+        startScanning()
     }
 
-    private fun onBluetoothStateUpdated(bluetoothState: BluetoothAdapterState) {
-        viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(bluetoothState = bluetoothState, isLoading = false)
-        }
+    fun shareIngredient() {
+        startInteractingWithBluetooth()
+        startServer()
     }
 
     fun startAdvertising(fromServer: Boolean) {
@@ -64,9 +95,30 @@ class GardenScreenViewModel @Inject constructor(
 
     fun startServer() {
         viewModelScope.launch {
-            bluetoothLeHandler.startServer()
+            bluetoothLeHandler.startServer(
+                startAdvertising = false,
+                handleReadRequest = ::handleServerReadRequest,
+                handleWriteRequest = ::handleServerWriteRequest,
+            )
         }
     }
+
+    private fun handleServerWriteRequest(
+        device: BluetoothDevice,
+        characteristicUUID: UUID,
+        value: ByteArray
+    ) {
+        handleUpdatedCharacteristic(characteristicUUID to value.decodeToString())
+    }
+
+    private fun handleServerReadRequest(
+        device: BluetoothDevice,
+        characteristicUUID: UUID
+    ): ByteArray? =
+        when (characteristicUUID) {
+            GardenService.mainIngredientUUID -> mainIngredientId.toString().toByteArray()
+            else -> null
+        }
 
     fun startScanning() {
         viewModelScope.launch {
@@ -80,9 +132,15 @@ class GardenScreenViewModel @Inject constructor(
         }
     }
 
-    fun readCharacteristic() {
+    fun readCharacteristic(context: Context) {
         viewModelScope.launch {
-            bluetoothLeHandlerOldApi.readCharacteristic()
+            bluetoothLeHandlerOldApi.readCharacteristic(context, true)
+        }
+    }
+
+    fun writeCharacteristic(context: Context) {
+        viewModelScope.launch {
+            bluetoothLeHandlerOldApi.writeCharacteristic(context, mainIngredientId.toString())
         }
     }
 
@@ -91,11 +149,32 @@ class GardenScreenViewModel @Inject constructor(
     }
 
     fun stopAllBluetoothAction() {
-        bluetoothLeHandler.stopEverything()
-        bluetoothLeHandlerOldApi.stopEverything()
+        viewModelScope.launch {
+            stopInteractingWithBluetooth()
+            bluetoothLeHandler.stopEverything()
+            bluetoothLeHandlerOldApi.stopEverything()
+        }
     }
 
     fun stopAdvertising(fromServer: Boolean) {
-        bluetoothLeHandler.stopAdvertising(fromServer)
+        viewModelScope.launch {
+            bluetoothLeHandler.stopAdvertising(fromServer)
+        }
+    }
+
+    private fun startInteractingWithBluetooth() {
+        isInteractingWithBluetooth.update { true }
+    }
+
+    private fun stopInteractingWithBluetooth() {
+        isInteractingWithBluetooth.update { false }
+    }
+
+    private fun handleUpdatedCharacteristic(characteristic: Pair<UUID, String>) {
+        characteristic.second.toIntOrNull()?.let { ingredientId ->
+            viewModelScope.launch {
+                addOneToIngredientCount(ingredientId)
+            }
+        }
     }
 }

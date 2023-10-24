@@ -1,6 +1,7 @@
 package nstv.bluetoothmagic.ui.screen.listView
 
 import android.content.Context
+import androidx.bluetooth.GattCharacteristic
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -28,6 +29,8 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import nstv.bluetoothmagic.bluetooth.data.BluetoothAdapterState
 import nstv.bluetoothmagic.bluetooth.data.ScannedDevice
+import nstv.bluetoothmagic.ui.components.BluetoothCharacteristic
+import nstv.bluetoothmagic.ui.components.BluetoothDeviceItem
 import nstv.bluetoothmagic.ui.components.BluetoothDisabledOverlay
 import nstv.bluetoothmagic.ui.components.PermissionsWrapper
 import nstv.bluetoothmagic.ui.theme.Grid
@@ -52,6 +55,7 @@ fun ListScreenView(
                     startScanning = viewModel::startScanning,
                     connectToServer = viewModel::connectToServer,
                     readCharacteristic = viewModel::readCharacteristic,
+                    writeCharacteristic = viewModel::writeCharacteristic,
                     stopAdvertising = viewModel::stopAdvertising,
                     stopAllBluetoothAction = viewModel::stopAllBluetoothAction,
                     modifier = Modifier.fillMaxSize()
@@ -74,7 +78,8 @@ fun ListScreenContent(
     startServer: () -> Unit,
     startScanning: () -> Unit,
     connectToServer: (Context, ScannedDevice) -> Unit,
-    readCharacteristic: () -> Unit,
+    readCharacteristic: (Context) -> Unit,
+    writeCharacteristic: (Context) -> Unit,
     stopAdvertising: (fromServer: Boolean) -> Unit,
     stopAllBluetoothAction: () -> Unit,
     modifier: Modifier = Modifier,
@@ -195,8 +200,17 @@ fun ListScreenContent(
             is BluetoothAdapterState.Connected -> {
                 Text(text = "Connected")
                 Spacer(modifier = Modifier.height(Grid.Three))
-                Button(onClick = readCharacteristic, modifier = Modifier.padding(Grid.Two)) {
+                Button(
+                    onClick = { readCharacteristic(context) },
+                    modifier = Modifier.padding(Grid.Two)
+                ) {
                     Text(text = "Read Characteristic")
+                }
+                Button(
+                    onClick = { writeCharacteristic(context) },
+                    modifier = Modifier.padding(Grid.Two)
+                ) {
+                    Text(text = "Write Characteristic")
                 }
                 Spacer(modifier = Modifier.height(Grid.Three))
                 Text(text = "Characteristics")
@@ -226,31 +240,4 @@ fun ListScreenContent(
     }
 }
 
-@Composable
-fun BluetoothDeviceItem(
-    item: ScannedDevice,
-    modifier: Modifier = Modifier,
-    onClick: () -> Unit = {},
-) {
-    Column(
-        modifier
-            .padding(Grid.Half)
-            .clickable { onClick() }) {
-        Text(text = item.deviceName)
-        Text(text = item.deviceAddress)
-        Text(text = item.deviceId)
-        HorizontalDivider(Modifier.height(Grid.Single))
-    }
-}
 
-@Composable
-fun BluetoothCharacteristic(
-    item: Pair<UUID, String>,
-    modifier: Modifier = Modifier,
-) {
-    Column(modifier) {
-        Text(text = "id:  ${item.first}")
-        Text(text = "value:  ${item.second}")
-        HorizontalDivider(Modifier.height(Grid.Single))
-    }
-}

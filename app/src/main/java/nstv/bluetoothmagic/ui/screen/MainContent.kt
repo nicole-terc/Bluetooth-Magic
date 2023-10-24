@@ -35,7 +35,7 @@ fun MainContent(modifier: Modifier = Modifier) {
             .fillMaxSize()
             .padding(Grid.Two),
     ) { paddingValues ->
-        var selectedScreen by remember { mutableStateOf(Screen.SCANNER_LIST) }
+        var selectedScreen by remember { mutableStateOf(Screen.GARDEN) }
 
         Column(
             modifier = Modifier

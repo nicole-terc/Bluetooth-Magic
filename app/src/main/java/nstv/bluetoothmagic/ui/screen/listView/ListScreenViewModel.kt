@@ -66,10 +66,17 @@ class ListScreenViewModel @Inject constructor(
         }
     }
 
-    fun readCharacteristic() {
+    fun readCharacteristic(context: Context) {
         viewModelScope.launch {
 //            bluetoothLeHandler.readCharacteristic()
-            bluetoothLeHandlerOldApi.readCharacteristic()
+            bluetoothLeHandlerOldApi.readCharacteristic(context, false)
+        }
+    }
+
+    fun writeCharacteristic(context: Context) {
+        viewModelScope.launch {
+//            bluetoothLeHandler.writeCharacteristic()
+            bluetoothLeHandlerOldApi.writeCharacteristic(context, "777")
         }
     }
 

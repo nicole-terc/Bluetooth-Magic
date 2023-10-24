@@ -15,6 +15,9 @@ interface IngredientCountDao {
     @Query("SELECT * FROM $INGREDIENT_TABLE_NAME WHERE isMainIngredient = 1 LIMIT 1")
     fun getMainIngredient(): IngredientCount?
 
+    @Query("SELECT * FROM $INGREDIENT_TABLE_NAME WHERE id = :id")
+    fun getIngredient(id: Int): IngredientCount?
+
     @Query("UPDATE $INGREDIENT_TABLE_NAME SET isMainIngredient = 1 WHERE id = :id")
     fun updateMainIngredient(id: Int)
 
