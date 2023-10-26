@@ -185,7 +185,7 @@ class BluetoothLeHandler @Inject constructor(
                                         "BluetoothLeHandler",
                                         "WriteCharacteristics: $serverRequest"
                                     )
-                                    serverRequest.parts.find { it.characteristic.uuid == GardenService.shareIngredientUUID }
+                                    serverRequest.parts.find { it.characteristic.uuid == GardenService.giveMushroomUUID }
                                         ?.let { part ->
                                             handleWriteRequest?.invoke(
                                                 request.device,
@@ -266,7 +266,7 @@ class BluetoothLeHandler @Inject constructor(
                         val characteristic = async {
                             readCharacteristic(
                                 getService(GardenService.serviceUUID)?.getCharacteristic(
-                                    GardenService.mainIngredientUUID
+                                    GardenService.mushroomToGetUUID
                                 )!!
                             )
                         }
@@ -277,7 +277,7 @@ class BluetoothLeHandler @Inject constructor(
                                 bluetoothStateRepository.updateBluetoothAdapterState(
                                     BluetoothAdapterState.Connected(
                                         characteristics = listOf(
-                                            GardenService.mainIngredientUUID to
+                                            GardenService.mushroomToGetUUID to
                                                     (result.getOrNull()?.toString(Charsets.UTF_8)
                                                         ?: "")
                                         ),

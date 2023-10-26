@@ -15,7 +15,6 @@ import android.os.Build
 import android.os.ParcelUuid
 import android.util.Log
 import android.bluetooth.BluetoothDevice
-import androidx.bluetooth.GattCharacteristic
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.SupervisorJob
@@ -124,7 +123,7 @@ class BluetoothLeHandlerOldApi @Inject constructor(
         this.updateGarden = updateGarden
         scope.launch(coroutineDispatcher) {
             val characteristicRead =
-                getGattServer(context)?.readCharacteristic(characteristicsRefMap[GardenService.mainIngredientUUID])
+                getGattServer(context)?.readCharacteristic(characteristicsRefMap[GardenService.mushroomToGetUUID])
             Log.d("BluetoothLeHandler", "readCharacteristic: $characteristicRead")
         }
     }
@@ -134,7 +133,7 @@ class BluetoothLeHandlerOldApi @Inject constructor(
         scope.launch(coroutineDispatcher) {
             Log.d("BluetoothLeHandler", "attempting to writeCharacteristic: $value")
             val data = value.toByteArray()
-            characteristicsRefMap[GardenService.shareIngredientUUID]?.let { shareCharacteristic ->
+            characteristicsRefMap[GardenService.giveMushroomUUID]?.let { shareCharacteristic ->
                 Log.d("BluetoothLeHandler", "writeCharacteristic: $shareCharacteristic")
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                     getGattServer(context)?.writeCharacteristic(
