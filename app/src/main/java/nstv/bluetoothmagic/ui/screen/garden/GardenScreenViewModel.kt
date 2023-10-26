@@ -21,6 +21,7 @@ import nstv.bluetoothmagic.bluetooth.GardenService
 import nstv.bluetoothmagic.bluetooth.data.BluetoothAdapterState
 import nstv.bluetoothmagic.bluetooth.data.ScannedDevice
 import nstv.bluetoothmagic.data.local.Ingredient
+import nstv.bluetoothmagic.data.local.toIngredient
 import nstv.bluetoothmagic.domain.AddOneToIngredientCount
 import nstv.bluetoothmagic.domain.GetAllIngredientsUseCase
 import nstv.bluetoothmagic.domain.GetMainIngredientIdUseCase
@@ -42,7 +43,13 @@ class GardenScreenViewModel @Inject constructor(
 
     private var mainIngredientId: Int = -1
     val isInteractingWithBluetooth = MutableStateFlow(false)
-    val ingredients = MutableStateFlow<List<Ingredient>>(emptyList())
+    val ingredients: StateFlow<List<Ingredient>> = getAllIngredientsUseCase()
+        .onStart { emit(emptyList()) }
+        .stateIn(
+            scope = viewModelScope,
+            started = SharingStarted.WhileSubscribed(5_000L),
+            initialValue = emptyList(),
+        )
     val uiState: StateFlow<GardenUiState> =
         bluetoothLeHandler.bluetoothState().map { bluetoothState ->
             GardenUiState(
@@ -50,8 +57,6 @@ class GardenScreenViewModel @Inject constructor(
             )
         }.onStart {
             GardenUiState()
-        }.onEach {
-            loadIngredients()
         }.stateIn(
             scope = viewModelScope,
             started = SharingStarted.WhileSubscribed(5_000L),
@@ -62,16 +67,6 @@ class GardenScreenViewModel @Inject constructor(
     init {
         viewModelScope.launch {
             mainIngredientId = getMainIngredientIdUseCase()
-            loadIngredients()
-        }
-    }
-
-    // Room was not playing nicely, need to fix this later :(
-    fun loadIngredients() {
-        viewModelScope.launch {
-            getAllIngredientsUseCase().collectLatest {
-                ingredients.value = it
-            }
         }
     }
 
@@ -173,6 +168,12 @@ class GardenScreenViewModel @Inject constructor(
             viewModelScope.launch {
                 addOneToIngredientCount(ingredientId)
             }
+        }
+    }
+
+    fun onIngredientClick(ingredient: Ingredient) {
+        viewModelScope.launch {
+            addOneToIngredientCount(ingredient.id)
         }
     }
 }

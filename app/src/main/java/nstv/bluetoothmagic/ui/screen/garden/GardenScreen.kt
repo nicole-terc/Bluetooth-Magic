@@ -1,15 +1,10 @@
 package nstv.bluetoothmagic.ui.screen.garden
 
 import android.content.Context
-import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateColorAsState
-import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
-import androidx.compose.animation.core.repeatable
 import androidx.compose.animation.core.spring
-import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -38,7 +33,6 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -56,8 +50,13 @@ import nstv.bluetoothmagic.bluetooth.data.ScannedDevice
 import nstv.bluetoothmagic.data.local.Ingredient
 import nstv.bluetoothmagic.data.local.IngredientCombinations
 import nstv.bluetoothmagic.ui.components.PermissionsWrapper
+import nstv.bluetoothmagic.ui.screen.garden.Debug.IncreaseOnClick
 import nstv.bluetoothmagic.ui.theme.BluetoothMagicTheme
 import nstv.bluetoothmagic.ui.theme.Grid
+
+private object Debug {
+    const val IncreaseOnClick = true
+}
 
 @Composable
 fun GardenScreen(
@@ -90,6 +89,11 @@ fun GardenScreen(
                 stopAllBluetoothAction = viewModel::stopAllBluetoothAction,
                 readCharacteristic = viewModel::readCharacteristic,
                 writeCharacteristic = viewModel::writeCharacteristic,
+                onIngredientClick = {
+                    if (IncreaseOnClick) {
+                        viewModel.onIngredientClick(it)
+                    }
+                },
             )
         }
     }
@@ -117,6 +121,7 @@ fun GardenScreenContent(
     writeCharacteristic: (Context) -> Unit,
     shareIngredient: () -> Unit,
     searchForIngredient: () -> Unit,
+    onIngredientClick: (Ingredient) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Box(modifier) {
@@ -124,6 +129,7 @@ fun GardenScreenContent(
             ingredients = ingredients,
             shareIngredient = shareIngredient,
             searchForIngredient = searchForIngredient,
+            onIngredientClick = onIngredientClick,
             modifier = Modifier.fillMaxSize(),
         )
 
@@ -155,6 +161,7 @@ fun Garden(
     ingredients: List<Ingredient>,
     shareIngredient: () -> Unit,
     searchForIngredient: () -> Unit,
+    onIngredientClick: (Ingredient) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     val mainIngredient = ingredients.find { it.isMainIngredient }
@@ -186,7 +193,9 @@ fun Garden(
                     )
                 }
                 IngredientItem(
-                    ingredient = mainIngredient, modifier = Modifier
+                    ingredient = mainIngredient,
+                    onIngredientClick = onIngredientClick,
+                    modifier = Modifier
                         .aspectRatio(0.6f)
                         .weight(1f)
                 )
@@ -215,7 +224,7 @@ fun Garden(
                 .weight(3f)
         ) {
             items(otherIngredients, key = { it.id }) { ingredient ->
-                IngredientItem(ingredient = ingredient)
+                IngredientItem(ingredient = ingredient, onIngredientClick = onIngredientClick)
             }
         }
     }
@@ -226,6 +235,7 @@ val blackAndWhite = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturatio
 @Composable
 fun IngredientItem(
     ingredient: Ingredient,
+    onIngredientClick: (Ingredient) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var scale by remember { mutableFloatStateOf(1f) }
@@ -253,6 +263,7 @@ fun IngredientItem(
                     indication = null
                 ) {
                     scale = if (scale == 1f) 0.5f else 1f
+                    onIngredientClick(ingredient)
                 }
                 .background(color = ingredient.color.copy(alpha = 0.8f), shape = CircleShape)
                 .padding(Grid.Half)
@@ -287,7 +298,8 @@ fun IngredientItem(
 private fun IngredientPreview() {
     BluetoothMagicTheme {
         IngredientItem(
-            IngredientCombinations.bayBolete
+            IngredientCombinations.bayBolete,
+            {}
         )
     }
 }
