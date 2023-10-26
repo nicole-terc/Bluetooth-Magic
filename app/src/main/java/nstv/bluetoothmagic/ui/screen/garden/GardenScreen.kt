@@ -1,9 +1,19 @@
 package nstv.bluetoothmagic.ui.screen.garden
 
 import android.content.Context
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.Spring
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.repeatable
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -27,10 +37,17 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.ColorFilter
+import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -204,11 +221,23 @@ fun Garden(
     }
 }
 
+val blackAndWhite = ColorFilter.colorMatrix(ColorMatrix().apply { setToSaturation(0f) })
+
 @Composable
 fun IngredientItem(
     ingredient: Ingredient,
     modifier: Modifier = Modifier,
 ) {
+    var scale by remember { mutableFloatStateOf(1f) }
+    val animatedScale by animateFloatAsState(
+        targetValue = scale,
+        label = "${ingredient.id}scale",
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioHighBouncy,
+            stiffness = Spring.StiffnessMedium
+        )
+    )
+
     Column(
         modifier = modifier.padding(Grid.Half),
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -219,6 +248,12 @@ fun IngredientItem(
                 .fillMaxWidth()
                 .aspectRatio(1f)
                 .clip(CircleShape)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null
+                ) {
+                    scale = if (scale == 1f) 0.5f else 1f
+                }
                 .background(color = ingredient.color.copy(alpha = 0.8f), shape = CircleShape)
                 .padding(Grid.Half)
         ) {
@@ -230,7 +265,9 @@ fun IngredientItem(
                     .fillMaxSize()
                     .padding(Grid.One)
                     .align(Alignment.Center)
+                    .scale(animatedScale),
             )
+
         }
         Text(
             text = ingredient.name,
