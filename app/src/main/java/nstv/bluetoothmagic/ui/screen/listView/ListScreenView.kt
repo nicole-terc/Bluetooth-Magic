@@ -1,8 +1,6 @@
 package nstv.bluetoothmagic.ui.screen.listView
 
 import android.content.Context
-import androidx.bluetooth.GattCharacteristic
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
@@ -15,8 +13,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -29,12 +25,12 @@ import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import nstv.bluetoothmagic.bluetooth.data.BluetoothAdapterState
 import nstv.bluetoothmagic.bluetooth.data.ScannedDevice
+import nstv.bluetoothmagic.sheep.LoadingSheep
 import nstv.bluetoothmagic.ui.components.BluetoothCharacteristic
 import nstv.bluetoothmagic.ui.components.BluetoothDeviceItem
 import nstv.bluetoothmagic.ui.components.BluetoothDisabledOverlay
 import nstv.bluetoothmagic.ui.components.PermissionsWrapper
 import nstv.bluetoothmagic.ui.theme.Grid
-import java.util.UUID
 
 @Composable
 fun ListScreenView(
@@ -195,7 +191,7 @@ fun ListScreenContent(
                 style = MaterialTheme.typography.labelMedium
             )
 
-            BluetoothAdapterState.Loading -> CircularProgressIndicator()
+            BluetoothAdapterState.Loading -> LoadingSheep()
             BluetoothAdapterState.Disconnected -> Text(text = "Disconnected")
             is BluetoothAdapterState.Connected -> {
                 Text(text = "Connected")

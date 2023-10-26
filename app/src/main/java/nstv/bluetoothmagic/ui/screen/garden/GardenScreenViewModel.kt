@@ -8,9 +8,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.onStart
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
@@ -21,7 +19,6 @@ import nstv.bluetoothmagic.bluetooth.GardenService
 import nstv.bluetoothmagic.bluetooth.data.BluetoothAdapterState
 import nstv.bluetoothmagic.bluetooth.data.ScannedDevice
 import nstv.bluetoothmagic.data.local.Ingredient
-import nstv.bluetoothmagic.data.local.toIngredient
 import nstv.bluetoothmagic.domain.AddOneToIngredientCount
 import nstv.bluetoothmagic.domain.GetAllIngredientsUseCase
 import nstv.bluetoothmagic.domain.GetMainIngredientIdUseCase
@@ -144,6 +141,9 @@ class GardenScreenViewModel @Inject constructor(
     fun stopAllBluetoothAction() {
         viewModelScope.launch {
             stopInteractingWithBluetooth()
+        }
+        //launch separately to prevent showing enabled state in overlay for some millis
+        viewModelScope.launch {
             bluetoothLeHandler.stopEverything()
             bluetoothLeHandlerOldApi.stopEverything()
         }

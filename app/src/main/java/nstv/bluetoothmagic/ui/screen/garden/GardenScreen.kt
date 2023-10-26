@@ -5,6 +5,10 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -14,6 +18,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -25,7 +30,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -36,10 +40,12 @@ import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Alignment.Companion.Center
 import androidx.compose.ui.Alignment.Companion.CenterVertically
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.res.painterResource
@@ -49,6 +55,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import nstv.bluetoothmagic.bluetooth.data.ScannedDevice
 import nstv.bluetoothmagic.data.local.Ingredient
 import nstv.bluetoothmagic.data.local.IngredientCombinations
+import nstv.bluetoothmagic.sheep.LoadingSheep
 import nstv.bluetoothmagic.ui.components.PermissionsWrapper
 import nstv.bluetoothmagic.ui.screen.garden.Debug.IncreaseOnClick
 import nstv.bluetoothmagic.ui.theme.BluetoothMagicTheme
@@ -70,7 +77,7 @@ fun GardenScreen(
     PermissionsWrapper(modifier.fillMaxSize()) {
         if (ingredients.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize()) {
-                CircularProgressIndicator(Modifier.align(Alignment.Center))
+                LoadingSheep(Modifier.align(Alignment.Center))
             }
         } else {
             GardenScreenContent(
@@ -135,23 +142,35 @@ fun GardenScreenContent(
 
         AnimatedVisibility(
             visible = isInteractingWithBluetooth,
-            modifier = Modifier.fillMaxSize(),
+            enter = scaleIn() + fadeIn(),
+            exit = scaleOut() + fadeOut(),
         ) {
-            BluetoothActionsOverlay(
-                bluetoothState = uiState.bluetoothState,
-                onBluetoothEnabled = onBluetoothEnabled,
-                startAdvertising = startAdvertising,
-                startServer = startServer,
-                startScanning = startScanning,
-                connectToServer = connectToServer,
-                stopAdvertising = stopAdvertising,
-                stopAllBluetoothAction = stopAllBluetoothAction,
-                readCharacteristic = readCharacteristic,
-                writeCharacteristic = writeCharacteristic,
-                modifier = Modifier
-                    .fillMaxSize(0.8f)
-                    .background(MaterialTheme.colorScheme.surface)
-            )
+            Box(modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.5f))
+                .clickable {
+//                    stopAllBluetoothAction()
+                }
+            ) {
+                BluetoothActionsOverlay(
+                    bluetoothState = uiState.bluetoothState,
+                    onBluetoothEnabled = onBluetoothEnabled,
+                    startAdvertising = startAdvertising,
+                    startServer = startServer,
+                    startScanning = startScanning,
+                    connectToServer = connectToServer,
+                    stopAdvertising = stopAdvertising,
+                    stopAllBluetoothAction = stopAllBluetoothAction,
+                    readCharacteristic = readCharacteristic,
+                    writeCharacteristic = writeCharacteristic,
+                    modifier = Modifier
+                        .fillMaxWidth(0.8f)
+                        .fillMaxHeight(0.8f)
+                        .padding(Grid.One)
+                        .align(Center)
+                        .background(MaterialTheme.colorScheme.surface)
+                )
+            }
         }
     }
 }

@@ -14,11 +14,11 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import kotlinx.serialization.json.Json
 import nstv.bluetoothmagic.BuildConfig
+import okhttp3.Call
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
-import javax.inject.Named
-import okhttp3.Call
 import okhttp3.logging.HttpLoggingInterceptor
+import javax.inject.Named
 import javax.inject.Singleton
 
 @Module
