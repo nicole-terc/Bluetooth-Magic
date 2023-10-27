@@ -30,6 +30,8 @@ import java.util.UUID
 import javax.inject.Inject
 import javax.inject.Singleton
 
+private const val CreateBond: Boolean = false
+
 @Singleton
 class BluetoothLeHandlerOldApi @Inject constructor(
     @IoDispatcher private val coroutineDispatcher: CoroutineDispatcher,
@@ -48,6 +50,23 @@ class BluetoothLeHandlerOldApi @Inject constructor(
 
     private var myService: BluetoothGattService? = null
     private var updateGarden: Boolean = false
+
+    @SuppressLint("MissingPermission")
+    fun stopEverything() {
+        stopScan()
+        gattServer?.disconnect()
+        gattServer?.close()
+        gattServer = null
+        connectedDevice = null
+        scannedDevices = emptyList()
+        myService = null
+        updateGarden = false
+        characteristicMap = mutableMapOf()
+        characteristicsRefMap = mutableMapOf()
+        bluetoothStateRepository.updateBluetoothAdapterStateToCurrentState()
+        scope.cancel()
+        scope = CoroutineScope(SupervisorJob())
+    }
 
     val scanCallback = object : ScanCallback() {
         override fun onScanResult(callbackType: Int, result: ScanResult?) {
@@ -161,6 +180,9 @@ class BluetoothLeHandlerOldApi @Inject constructor(
                         BluetoothAdapterState.Connected(emptyList())
                     )
                     gatt?.discoverServices()
+                    if (CreateBond) {
+                        gatt?.device?.createBond()
+                    }
                 }
 
                 BluetoothGatt.STATE_DISCONNECTED -> {
@@ -261,22 +283,5 @@ class BluetoothLeHandlerOldApi @Inject constructor(
                 }
             }
         }
-    }
-
-    @SuppressLint("MissingPermission")
-    fun stopEverything() {
-        stopScan()
-        gattServer?.disconnect()
-        gattServer?.close()
-        gattServer = null
-        connectedDevice = null
-        scannedDevices = emptyList()
-        myService = null
-        updateGarden = false
-        characteristicMap = mutableMapOf()
-        characteristicsRefMap = mutableMapOf()
-        bluetoothStateRepository.updateBluetoothAdapterStateToCurrentState()
-        scope.cancel()
-        scope = CoroutineScope(SupervisorJob())
     }
 }

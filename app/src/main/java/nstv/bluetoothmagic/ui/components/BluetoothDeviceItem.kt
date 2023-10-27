@@ -8,6 +8,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
 import nstv.bluetoothmagic.bluetooth.data.ScannedDevice
 import nstv.bluetoothmagic.ui.theme.Grid
 
@@ -21,9 +22,10 @@ fun BluetoothDeviceItem(
         modifier
             .padding(Grid.Half)
             .clickable { onClick() }) {
-        Text(text = item.deviceName)
-        Text(text = item.deviceAddress)
-        Text(text = item.deviceId)
+        Text(text = "name ${item.deviceName}")
+//        Text(text = item.deviceAddress)
+//        Text(text = "deviceId: ${item.deviceId}", maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(text = "BondState ${item.bondState.name}")
         HorizontalDivider(Modifier.height(Grid.Single))
     }
 }

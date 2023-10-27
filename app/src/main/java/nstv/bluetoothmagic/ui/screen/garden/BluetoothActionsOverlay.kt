@@ -25,6 +25,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import nstv.bluetoothmagic.bluetooth.data.BluetoothAdapterState
+import nstv.bluetoothmagic.bluetooth.data.BondState
 import nstv.bluetoothmagic.bluetooth.data.ScannedDevice
 import nstv.bluetoothmagic.sheep.LoadingSheep
 import nstv.bluetoothmagic.ui.components.BluetoothCharacteristic
@@ -52,7 +53,7 @@ fun BluetoothActionsOverlay(
     }
 
     Column(
-        modifier = modifier,
+        modifier = modifier.padding(Grid.One),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
@@ -319,6 +320,7 @@ private fun PreviewServerStarted() {
                     deviceName = "Test",
                     deviceAddress = "Test",
                     deviceId = "Test",
+                    bondState = BondState.BONDED,
                 )
             )
         )
@@ -335,6 +337,7 @@ private fun PreviewScanning() {
                     deviceName = "Test",
                     deviceAddress = "Test",
                     deviceId = "Test",
+                    bondState = BondState.BONDED,
                 )
             )
         )

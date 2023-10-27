@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -50,12 +51,15 @@ import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.ColorMatrix
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import nstv.bluetoothmagic.bluetooth.data.BluetoothAdapterState
 import nstv.bluetoothmagic.bluetooth.data.ScannedDevice
 import nstv.bluetoothmagic.data.local.Ingredient
 import nstv.bluetoothmagic.data.local.IngredientCombinations
 import nstv.bluetoothmagic.sheep.LoadingSheep
+import nstv.bluetoothmagic.ui.components.BluetoothDisabledOverlay
 import nstv.bluetoothmagic.ui.components.PermissionsWrapper
 import nstv.bluetoothmagic.ui.screen.garden.Debug.IncreaseOnClick
 import nstv.bluetoothmagic.ui.theme.BluetoothMagicTheme
@@ -75,9 +79,19 @@ fun GardenScreen(
     val isInteractingWithBluetooth by viewModel.isInteractingWithBluetooth.collectAsStateWithLifecycle()
 
     PermissionsWrapper(modifier.fillMaxSize()) {
-        if (ingredients.isEmpty()) {
+        if (!isInteractingWithBluetooth && uiState.bluetoothState == BluetoothAdapterState.Disabled) {
+            BluetoothDisabledOverlay(
+                modifier = Modifier.fillMaxSize(),
+                onBluetoothEnabled = viewModel::onBluetoothEnabled
+            )
+
+        } else if (ingredients.isEmpty()) {
             Box(modifier = Modifier.fillMaxSize()) {
-                LoadingSheep(Modifier.align(Alignment.Center))
+                LoadingSheep(
+                    Modifier
+                        .size(200.dp)
+                        .align(Alignment.Center)
+                )
             }
         } else {
             GardenScreenContent(
@@ -148,7 +162,10 @@ fun GardenScreenContent(
             Box(modifier = Modifier
                 .fillMaxSize()
                 .background(Color.Black.copy(alpha = 0.5f))
-                .clickable {
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null
+                ) {
 //                    stopAllBluetoothAction()
                 }
             ) {
@@ -164,9 +181,8 @@ fun GardenScreenContent(
                     readCharacteristic = readCharacteristic,
                     writeCharacteristic = writeCharacteristic,
                     modifier = Modifier
-                        .fillMaxWidth(0.8f)
+                        .fillMaxWidth(0.9f)
                         .fillMaxHeight(0.8f)
-                        .padding(Grid.One)
                         .align(Center)
                         .background(MaterialTheme.colorScheme.surface)
                 )
