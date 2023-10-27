@@ -28,6 +28,13 @@ fun IngredientCount.toIngredient() =
     )
 
 object IngredientCombinations {
+    val unknown = Ingredient(
+        id = -1,
+        name = "Unknown",
+        resource = R.drawable.ic_question_mark,
+        color = Color.LightGray,
+    )
+
     val bayBolete = Ingredient(
         id = 1,
         name = "Bay Bolete",

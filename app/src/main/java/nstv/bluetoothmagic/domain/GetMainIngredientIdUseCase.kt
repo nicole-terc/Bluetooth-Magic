@@ -10,19 +10,10 @@ import javax.inject.Inject
 
 class GetMainIngredientIdUseCase @Inject constructor(
     @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
-    private val insertAllMushrooms: InsertAllMushrooms,
-    private val ingredientCountDao: IngredientCountDao,
+    private val getMainIngredientUseCase: GetMainIngredientUseCase,
 ) {
 
     suspend operator fun invoke(): Int = withContext(ioDispatcher) {
-        var mainIngredient = ingredientCountDao.getMainIngredient()
-
-        if (mainIngredient == null) {
-            val tempMainIngredient = IngredientCombinations.getRandom()
-            insertAllMushrooms(tempMainIngredient)
-            mainIngredient = tempMainIngredient.toIngredientCount()
-        }
-
-        return@withContext mainIngredient.id
+        return@withContext getMainIngredientUseCase().id
     }
 }

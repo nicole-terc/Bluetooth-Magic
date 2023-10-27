@@ -169,6 +169,7 @@ class GardenScreenViewModel @Inject constructor(
                 addOneToIngredientCount(ingredientId)
             }
         }
+        bluetoothLeHandler.updateServerState(characteristic)
     }
 
     fun onIngredientClick(ingredient: Ingredient) {

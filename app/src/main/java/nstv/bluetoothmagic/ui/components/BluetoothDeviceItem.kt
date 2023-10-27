@@ -22,10 +22,10 @@ fun BluetoothDeviceItem(
         modifier
             .padding(Grid.Half)
             .clickable { onClick() }) {
-        Text(text = "name ${item.deviceName}")
+        Text(text = item.deviceName)
 //        Text(text = item.deviceAddress)
 //        Text(text = "deviceId: ${item.deviceId}", maxLines = 1, overflow = TextOverflow.Ellipsis)
-        Text(text = "BondState ${item.bondState.name}")
+        Text(text = "BondState: ${item.bondState.name}")
         HorizontalDivider(Modifier.height(Grid.Single))
     }
 }

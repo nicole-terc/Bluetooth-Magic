@@ -53,6 +53,17 @@ class BluetoothLeHandler @Inject constructor(
         bluetoothStateRepository.updateBluetoothAdapterState(BluetoothAdapterState.Enabled)
     }
 
+    fun updateServerState(updatedCharacteristic: Pair<UUID, String>) {
+        val currentState = bluetoothStateRepository.getCurrentState()
+        if (currentState is BluetoothAdapterState.ServerStarted) {
+            bluetoothStateRepository.updateBluetoothAdapterState(
+                currentState.copy(
+                    updatedCharacteristic = updatedCharacteristic
+                )
+            )
+        }
+    }
+
     fun getAdvertiseParams() =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             AdvertiseParams(

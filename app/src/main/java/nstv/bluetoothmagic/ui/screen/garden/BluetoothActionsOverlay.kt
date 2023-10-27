@@ -1,11 +1,13 @@
 package nstv.bluetoothmagic.ui.screen.garden
 
 import android.content.Context
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.IntrinsicSize
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -20,6 +22,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.Alignment.Companion.CenterHorizontally
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.tooling.preview.Preview
@@ -27,6 +30,8 @@ import androidx.compose.ui.unit.dp
 import nstv.bluetoothmagic.bluetooth.data.BluetoothAdapterState
 import nstv.bluetoothmagic.bluetooth.data.BondState
 import nstv.bluetoothmagic.bluetooth.data.ScannedDevice
+import nstv.bluetoothmagic.data.local.Ingredient
+import nstv.bluetoothmagic.data.local.IngredientCombinations
 import nstv.bluetoothmagic.sheep.LoadingSheep
 import nstv.bluetoothmagic.ui.components.BluetoothCharacteristic
 import nstv.bluetoothmagic.ui.components.BluetoothDeviceItem
@@ -37,6 +42,7 @@ import java.util.UUID
 @Composable
 fun BluetoothActionsOverlay(
     bluetoothState: BluetoothAdapterState,
+    ingredients: List<Ingredient>,
     onBluetoothEnabled: () -> Unit,
     startAdvertising: (fromServer: Boolean) -> Unit,
     startServer: () -> Unit,
@@ -79,6 +85,7 @@ fun BluetoothActionsOverlay(
 
             is BluetoothAdapterState.ServerStarted -> ServerStarted(
                 serverStarted = bluetoothState,
+                ingredients = ingredients,
                 startAdvertising = startAdvertising,
                 stopAdvertising = stopAdvertising,
             )
@@ -90,6 +97,7 @@ fun BluetoothActionsOverlay(
 
             is BluetoothAdapterState.Connected -> Connected(
                 connected = bluetoothState,
+                ingredients = ingredients,
                 readCharacteristic = readCharacteristic,
                 writeCharacteristic = writeCharacteristic,
             )
@@ -157,9 +165,15 @@ fun Enabled(
 @Composable
 fun ColumnScope.ServerStarted(
     serverStarted: BluetoothAdapterState.ServerStarted,
+    ingredients: List<Ingredient>,
     startAdvertising: (fromServer: Boolean) -> Unit,
     stopAdvertising: (fromServer: Boolean) -> Unit,
 ) {
+    val context = LocalContext.current
+    val writeIngredient =
+        ingredients.find { it.id == serverStarted.updatedCharacteristic?.second?.toIntOrNull() }
+            ?: IngredientCombinations.unknown
+
     Text(
         text = "Server Started",
         style = MaterialTheme.typography.headlineMedium,
@@ -180,7 +194,6 @@ fun ColumnScope.ServerStarted(
         Text(text = if (serverStarted.isAdvertising) "Stop Advertising" else "Start Advertising")
     }
     Spacer(modifier = Modifier.height(Grid.Three))
-    Text(text = "Connected Devices")
     if (serverStarted.connectedDevices.isEmpty()) {
         LoadingSheep(
             modifier = Modifier
@@ -188,7 +201,30 @@ fun ColumnScope.ServerStarted(
                 .padding(Grid.One),
             spinning = serverStarted.isAdvertising,
         )
+    } else {
+        Row(
+            Modifier
+                .width(150.dp)
+                .padding(Grid.One),
+            horizontalArrangement = Arrangement.Center,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(
+                    text = "⬇ Get!",
+                    Modifier.align(CenterHorizontally),
+                    style = MaterialTheme.typography.headlineSmall
+                )
+                IngredientItem(
+                    ingredient = writeIngredient,
+                    onIngredientClick = {
+                        Toast.makeText(context, "WOOP!", Toast.LENGTH_SHORT).show()
+                    })
+
+            }
+        }
     }
+    Text(text = "Connected Devices")
     LazyColumn(
         modifier = Modifier
             .fillMaxSize()
@@ -238,10 +274,17 @@ fun ColumnScope.Scanning(
 @Composable
 fun ColumnScope.Connected(
     connected: BluetoothAdapterState.Connected,
+    ingredients: List<Ingredient>,
     readCharacteristic: (Context) -> Unit,
     writeCharacteristic: (Context) -> Unit,
 ) {
     val context = LocalContext.current
+    val writeIngredient =
+        ingredients.find { it.isMainIngredient } ?: IngredientCombinations.unknown
+    val readIngredient =
+        ingredients.find { it.id == connected.updatedCharacteristic?.second?.toIntOrNull() }
+            ?: IngredientCombinations.unknown
+
     Text(
         text = "Connected",
         style = MaterialTheme.typography.headlineMedium,
@@ -249,17 +292,35 @@ fun ColumnScope.Connected(
             .padding(Grid.Two)
             .align(Alignment.CenterHorizontally)
     )
-    Button(
-        onClick = { readCharacteristic(context) },
-        modifier = Modifier.padding(Grid.Two)
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .padding(horizontal = Grid.Three, vertical = Grid.Two),
+        horizontalArrangement = Arrangement.SpaceEvenly,
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(text = "Get Mushroom!")
-    }
-    Button(
-        onClick = { writeCharacteristic(context) },
-        modifier = Modifier.padding(Grid.Two)
-    ) {
-        Text(text = "Send Mushroom!")
+        Column(Modifier.weight(1f)) {
+            Text(
+                text = "⬇ Get!",
+                Modifier.align(CenterHorizontally),
+                style = MaterialTheme.typography.headlineSmall
+            )
+            IngredientItem(
+                ingredient = readIngredient,
+                onIngredientClick = { readCharacteristic(context) })
+
+        }
+        Spacer(modifier = Modifier.width(Grid.Three))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = "⬆ Send!",
+                Modifier.align(CenterHorizontally),
+                style = MaterialTheme.typography.headlineSmall
+            )
+            IngredientItem(
+                ingredient = writeIngredient,
+                onIngredientClick = { writeCharacteristic(context) })
+        }
     }
     Spacer(modifier = Modifier.height(Grid.Three))
     Text(text = "Characteristics")
@@ -287,6 +348,11 @@ fun ColumnScope.LoadingWithText(
 
 }
 
+
+/**
+ * PREVIEWS ------------------------
+ */
+
 @Composable
 private fun PreviewBluetoothActionsOverlay(state: BluetoothAdapterState) {
     BluetoothActionsOverlay(
@@ -300,6 +366,7 @@ private fun PreviewBluetoothActionsOverlay(state: BluetoothAdapterState) {
         stopAllBluetoothAction = { },
         readCharacteristic = { },
         writeCharacteristic = { },
+        ingredients = IngredientCombinations.list
     )
 }
 

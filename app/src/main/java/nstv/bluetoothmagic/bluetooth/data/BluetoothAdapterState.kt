@@ -16,6 +16,7 @@ sealed interface BluetoothAdapterState {
     data class ServerStarted(
         val isAdvertising: Boolean,
         val connectedDevices: List<ScannedDevice> = emptyList(),
+        val updatedCharacteristic: Pair<UUID, String>? = null,
     ) : BluetoothAdapterState
 
     data object Connecting : BluetoothAdapterState

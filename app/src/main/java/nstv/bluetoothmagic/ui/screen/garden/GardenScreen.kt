@@ -184,7 +184,8 @@ fun GardenScreenContent(
                         .fillMaxWidth(0.9f)
                         .fillMaxHeight(0.8f)
                         .align(Center)
-                        .background(MaterialTheme.colorScheme.surface)
+                        .background(MaterialTheme.colorScheme.surface),
+                    ingredients = ingredients,
                 )
             }
         }
@@ -321,7 +322,7 @@ fun IngredientItem(
             style = MaterialTheme.typography.bodyMedium
         )
         Text(
-            text = "Count: ${ingredient.count}",
+            text = if(ingredient.isMainIngredient) "∞" else "Count: ${ingredient.count}",
             modifier = Modifier.padding(top = Grid.Half),
             style = MaterialTheme.typography.labelMedium
         )
